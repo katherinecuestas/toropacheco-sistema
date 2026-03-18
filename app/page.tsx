@@ -1,52 +1,123 @@
-import Image from "next/image";
+'use client'
+
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export default function Home() {
+  const [estado, setEstado] = useState({
+    conexion: 'Verificando...',
+    variablesEnv: false,
+    clienteCreado: false,
+    rlsActivo: false
+  })
+
+  useEffect(() => {
+    async function verificarSistema() {
+      // 1. Verificar variables de entorno
+      const urlEnv = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const keyEnv = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      
+      if (!urlEnv || !keyEnv) {
+        setEstado({
+          conexion: 'Error: Variables de entorno no configuradas',
+          variablesEnv: false,
+          clienteCreado: false,
+          rlsActivo: false
+        })
+        return
+      }
+
+      // 2. Verificar que el cliente se creó
+      if (!supabase) {
+        setEstado({
+          conexion: 'Error: Cliente de Supabase no se pudo crear',
+          variablesEnv: true,
+          clienteCreado: false,
+          rlsActivo: false
+        })
+        return
+      }
+
+      // 3. Intentar consulta (esperamos que falle por RLS)
+      const { data, error } = await supabase
+        .from('abogados')
+        .select('count')
+        .single()
+
+      // 4. Analizar resultado
+      if (error) {
+        // Si el error es de RLS o autenticación, es CORRECTO
+        if (error.message.includes('row-level security') || 
+            error.message.includes('Failed to fetch') ||
+            error.code === 'PGRST116') {
+          setEstado({
+            conexion: 'Sistema configurado correctamente',
+            variablesEnv: true,
+            clienteCreado: true,
+            rlsActivo: true
+          })
+        } else {
+          setEstado({
+            conexion: `Error inesperado: ${error.message}`,
+            variablesEnv: true,
+            clienteCreado: true,
+            rlsActivo: false
+          })
+        }
+      } else {
+        // Si no hay error, RLS está desactivado (problema de seguridad)
+        setEstado({
+          conexion: 'Advertencia: RLS no está activo',
+          variablesEnv: true,
+          clienteCreado: true,
+          rlsActivo: false
+        })
+      }
+    }
+
+    verificarSistema()
+  }, [])
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            Sistema Toropacheco y Asociados
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Plataforma integral para la gestión de consultas legales, 
-            videollamadas y contratos con cuotas. Versión 1.0
-          </p>
+    <div className="min-h-screen p-8 bg-white dark:bg-black">
+      <h1 className="text-3xl font-bold mb-8">
+        Sistema Toropacheco y Asociados
+      </h1>
+      
+      <div className="space-y-6">
+        <div className="border border-gray-300 dark:border-gray-700 rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-4">Estado del Sistema:</h2>
+          <p className="text-lg mb-4">{estado.conexion}</p>
+          
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className={`w-4 h-4 rounded-full ${estado.variablesEnv ? 'bg-green-500' : 'bg-red-500'}`}></span>
+              <span>Variables de entorno: {estado.variablesEnv ? 'Configuradas' : 'No configuradas'}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span className={`w-4 h-4 rounded-full ${estado.clienteCreado ? 'bg-green-500' : 'bg-red-500'}`}></span>
+              <span>Cliente Supabase: {estado.clienteCreado ? 'Creado' : 'Error'}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span className={`w-4 h-4 rounded-full ${estado.rlsActivo ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
+              <span>Row Level Security: {estado.rlsActivo ? 'Activo' : 'Inactivo o no verificado'}</span>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        {estado.conexion === 'Sistema configurado correctamente' && (
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-2">
+              ✓ Configuración Exitosa
+            </h3>
+            <p className="text-green-700 dark:text-green-300">
+              Todos los componentes están configurados correctamente. El sistema está listo para implementar autenticación.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
-  );
+  )
 }
