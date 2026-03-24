@@ -43,25 +43,48 @@ export default function DashboardPage() {
     router.push('/login')
   }
 
-  async function handleResponder(consultaId: number) {
-    if (!textoRespuesta.trim()) {
-      setMensaje({ tipo: 'error', texto: 'La respuesta no puede estar vacía.' })
-      return
-    }
-    setEnviando(true)
-    const { success, error } = await responderConsulta(consultaId, textoRespuesta, abogado.id)
-    if (success) {
-      setMensaje({ tipo: 'exito', texto: 'Respuesta enviada correctamente.' })
-      setConsultaActiva(null)
-      setTextoRespuesta('')
-      const { consultas: actualizadas } = await obtenerMisConsultas()
-      if (actualizadas) setConsultas(actualizadas)
-    } else {
-      setMensaje({ tipo: 'error', texto: error || 'Error al enviar respuesta.' })
-    }
-    setEnviando(false)
-    setTimeout(() => setMensaje(null), 4000)
+async function handleResponder(consultaId: number) {
+  if (!textoRespuesta.trim()) {
+    setMensaje({ tipo: 'error', texto: 'La respuesta no puede estar vacía.' })
+    return
   }
+
+  setEnviando(true)
+
+  // Paso 1: Guardar respuesta en Supabase
+  const { success, error } = await responderConsulta(consultaId, textoRespuesta, abogado.id)
+
+  if (!success) {
+    setMensaje({ tipo: 'error', texto: error || 'Error al guardar respuesta.' })
+    setEnviando(false)
+    return
+  }
+
+  // Paso 2: Enviar email al cliente
+  const consultaRespondida = consultas.find(c => c.id === consultaId)
+  if (consultaRespondida) {
+    await fetch('/api/enviar-respuesta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        emailCliente: consultaRespondida.email_cliente,
+        nombreCliente: consultaRespondida.nombre_cliente,
+        asunto: consultaRespondida.asunto,
+        respuesta: textoRespuesta
+      })
+    })
+  }
+
+  // Paso 3: Actualizar pantalla
+  setMensaje({ tipo: 'exito', texto: 'Respuesta enviada y email notificado al cliente.' })
+  setConsultaActiva(null)
+  setTextoRespuesta('')
+  const { consultas: actualizadas } = await obtenerMisConsultas()
+  if (actualizadas) setConsultas(actualizadas)
+
+  setEnviando(false)
+  setTimeout(() => setMensaje(null), 4000)
+}
 
   async function handleRechazar(consultaId: number) {
     setEnviando(true)

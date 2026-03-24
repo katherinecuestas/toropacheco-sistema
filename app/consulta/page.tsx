@@ -1,12 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { enviarConsulta } from '@/lib/consultas'
 
 export default function ConsultaPage() {
-  const searchParams = useSearchParams()
-  const abogadoId = Number(searchParams.get('id'))
+  const abogadoId = 2 // TODO: usar searchParams.get('id') cuando haya múltiples abogados
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [exito, setExito] = useState(false)
