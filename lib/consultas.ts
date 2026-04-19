@@ -30,6 +30,8 @@ export async function enviarConsulta(
   telefonoCliente?: string
 ) {
   try {
+    const token = crypto.randomUUID()
+
     const { error } = await supabase
       .from('consultas')
       .insert([
@@ -40,13 +42,20 @@ export async function enviarConsulta(
           telefono_cliente: telefonoCliente || null,
           asunto: asunto,
           mensaje: mensaje,
-          estado: 'nueva'
+          estado: 'nueva',
+          token,
         }
       ])
 
     if (error) {
       return { success: false, error: error.message }
     }
+
+    await fetch('/api/confirmar-consulta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emailCliente, nombreCliente, asunto, token })
+    })
 
     return { success: true }
   } catch (error) {
