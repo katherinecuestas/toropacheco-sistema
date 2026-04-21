@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ⚖️ Toropacheco — Sistema LegalTech
 
-## Getting Started
+Sistema web para la gestión integral de consultas legales, videollamadas y contratos digitales. Desarrollado con **Next.js 14**, **TypeScript** y **Tailwind CSS**.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Demo
+
+> 🔗 [Ver proyecto en GitHub](https://github.com/katherinecuestas/toropacheco-sistema)
+
+---
+
+## 📋 Descripción
+
+Toropacheco es una plataforma LegalTech que conecta a clientes con abogados, permitiendo agendar consultas, realizar videollamadas y gestionar contratos digitales desde un mismo lugar. La interfaz está diseñada para ser intuitiva, rápida y accesible desde cualquier dispositivo.
+
+---
+
+## ✨ Funcionalidades
+
+- 📅 **Gestión de consultas** — Agendamiento y seguimiento de consultas legales
+- 🎥 **Videollamadas** — Integración para reuniones virtuales entre cliente y abogado
+- 📄 **Contratos digitales** — Creación, visualización y administración de contratos
+- 🔐 **Autenticación** — Control de acceso por roles (cliente / abogado / admin)
+- 📱 **Diseño responsivo** — Adaptado para desktop y dispositivos móviles
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Tecnología | Uso |
+|---|---|
+| [Next.js 14](https://nextjs.org/) | Framework React con App Router |
+| [TypeScript](https://www.typescriptlang.org/) | Tipado estático |
+| [Tailwind CSS](https://tailwindcss.com/) | Estilos utilitarios |
+| [shadcn/ui](https://ui.shadcn.com/) | Componentes de interfaz |
+| [React](https://react.dev/) | Biblioteca de UI |
+| ESLint + Prettier | Calidad y estándar de código |
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+toropacheco-sistema/
+├── app/                  # Rutas y páginas (App Router)
+├── components/
+│   └── ui/               # Componentes reutilizables (shadcn/ui)
+├── lib/                  # Utilidades y helpers
+├── public/               # Assets estáticos
+├── next.config.ts        # Configuración de Next.js
+├── tailwind.config.ts    # Configuración de Tailwind
+└── tsconfig.json         # Configuración de TypeScript
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ⚙️ Instalación y uso local
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/katherinecuestas/toropacheco-sistema.git
 
-## Learn More
+# 2. Instalar dependencias
+cd toropacheco-sistema
+npm install
 
-To learn more about Next.js, take a look at the following resources:
+# 3. Ejecutar en modo desarrollo
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Abrir [http://localhost:3000](http://localhost:3000) en el navegador.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 👩‍💻 Autora
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Katherine Cuestas**
+Desarrolladora Full Stack Junior
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[![GitHub](https://img.shields.io/badge/GitHub-katherinecuestas-181717?logo=github)](https://github.com/katherinecuestas)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-katherine--cuestas-0A66C2?logo=linkedin)](https://www.linkedin.com/in/katherine-cuestas)
+
+---
+
+## 📄 Licencia
+
+Este proyecto es de uso personal y académico.
