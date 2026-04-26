@@ -112,7 +112,7 @@ export default function Home() {
 
       {/* NAVBAR */}
       <nav className="fixed top-0 w-full z-50" style={{ backgroundColor: azulProfundo }}>
-        <div className="max-w-7xl mx-auto px-6 h-18 flex justify-between items-center py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex justify-between items-center py-4">
           <div>
             <img src="/logo_claro.png" alt="Toro Pacheco & Asociados" className="h-16 w-auto" />
           </div>
@@ -145,13 +145,12 @@ export default function Home() {
       <section className="min-h-screen flex items-start pt-20 relative" style={{ backgroundColor: '#FDFBF5' }}>
         <div className="absolute top-0 left-0 right-0 h-28 pointer-events-none z-10"
           style={{ background: `linear-gradient(to bottom, ${azulProfundo}, transparent)` }} />
-        <div className="max-w-7xl mx-auto px-6 w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end py-1 relative">
 
-            {/* Cambiamos justify-end por justify-center para que flote más arriba y quitamos el padding inferior excesivo */}
-            <div className="lg:col-span-4 flex flex-col justify-center pb-24 relative z-10">
+            <div className="lg:col-span-4 flex flex-col justify-center pb-8 lg:pb-24 pt-4 lg:pt-0 relative z-10">
 
-              <h1 className="text-6xl md:text-7xl font-bold leading-[0.9] mb-6 backdrop-blur-sm rounded-2xl px-4 py-3 -mx-4"
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight lg:leading-[0.9] mb-6 backdrop-blur-sm rounded-2xl px-4 py-3 -mx-4"
     style={{ fontFamily: 'var(--font-playfair), serif', letterSpacing: '-0.02em', backgroundColor: 'rgba(253,251,245,0.55)' }}>
                 <span style={{ color: azul }}>Protegemos</span><br />
                 <span style={{ color: azul }}>lo que más</span><br />
@@ -186,8 +185,8 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Columna central — imagen sin fondo */}
-            <div className="lg:col-span-5 flex items-end justify-center h-full relative z-20" style={{ marginLeft: '-4rem', marginRight: '-2rem' }}>
+            {/* Columna central — imagen sin fondo, oculta en móvil */}
+            <div className="hidden lg:flex lg:col-span-5 items-end justify-center h-full relative z-20" style={{ marginLeft: '-4rem', marginRight: '-2rem' }}>
             <div className="w-full h-[750px] relative flex items-end justify-center">
               <img
                 src="/justicia2.png"
@@ -216,8 +215,7 @@ export default function Home() {
               </div>
             </div>
 
-                {/* Reducimos el padding bottom para que la gravedad la baje un poco más hacia la base del Hero */}
-                <div className="lg:col-span-3 flex flex-col justify-end pb-16 space-y-3 relative z-10">
+                <div className="hidden lg:flex lg:col-span-3 flex-col justify-end pb-16 space-y-3 relative z-10">
               <p className="text-xs font-bold tracking-widest mb-2" style={{ color: dorado }}>ÁREAS DE PRÁCTICA</p>
               {[
                 { icon: '⚖️', titulo: 'Derecho Laboral', desc: 'Despidos, finiquitos y acoso laboral.' },
@@ -251,11 +249,11 @@ export default function Home() {
       </section>
 
       {/* SERVICIOS */}
-      <section id="servicios" className="py-24 px-6" style={{ backgroundColor: '#F5F7FA' }}>
+      <section id="servicios" className="py-16 sm:py-24 px-4 sm:px-6" style={{ backgroundColor: '#F5F7FA' }}>
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <p className="text-xs font-bold tracking-widest mb-3" style={{ color: dorado }}>NUESTRAS ESPECIALIDADES</p>
-            <h2 className="text-4xl font-bold mb-3" style={{ fontFamily: 'var(--font-playfair), serif', color: azul }}>
+            <h2 className="text-2xl sm:text-4xl font-bold mb-3" style={{ fontFamily: 'var(--font-playfair), serif', color: azul }}>
               Áreas de práctica
             </h2>
             <div className="w-16 h-0.5 mx-auto" style={{ backgroundColor: dorado }} />
@@ -282,11 +280,11 @@ export default function Home() {
       </section>
 
       {/* CÓMO FUNCIONA */}
-      <section id="como-funciona" className="py-24 px-6" style={{ backgroundColor: azulProfundo }}>
+      <section id="como-funciona" className="py-16 sm:py-24 px-4 sm:px-6" style={{ backgroundColor: azulProfundo }}>
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-14">
             <p className="text-xs font-bold tracking-widest mb-3" style={{ color: dorado }}>PROCESO</p>
-            <h2 className="text-4xl font-bold text-white" style={{ fontFamily: 'var(--font-playfair), serif' }}>
+            <h2 className="text-2xl sm:text-4xl font-bold text-white" style={{ fontFamily: 'var(--font-playfair), serif' }}>
               Cómo funciona
             </h2>
             <div className="w-16 h-0.5 mx-auto mt-4" style={{ backgroundColor: dorado }} />
@@ -310,11 +308,11 @@ export default function Home() {
       </section>
 
       {/* FORMULARIO DE CONSULTA */}
-      <section id="consulta" className="py-24 px-6" style={{ backgroundColor: '#F5F7FA' }}>
+      <section id="consulta" className="py-16 sm:py-24 px-4 sm:px-6" style={{ backgroundColor: '#F5F7FA' }}>
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-10">
             <p className="text-xs font-bold tracking-widest mb-3" style={{ color: dorado }}>COMIENZA HOY</p>
-            <h2 className="text-4xl font-bold mb-3" style={{ fontFamily: 'var(--font-playfair), serif', color: azul }}>
+            <h2 className="text-2xl sm:text-4xl font-bold mb-3" style={{ fontFamily: 'var(--font-playfair), serif', color: azul }}>
               ¿Cómo quieres comenzar?
             </h2>
             <div className="w-16 h-0.5 mx-auto mb-4" style={{ backgroundColor: dorado }} />
@@ -345,7 +343,7 @@ export default function Home() {
 
           {/* TAB: CONSULTA POR TEXTO */}
           {tab === 'texto' && (
-            <div className="bg-white rounded-2xl p-8 shadow-sm border" style={{ borderColor: '#E5E7EB' }}>
+            <div className="bg-white rounded-2xl p-5 sm:p-8 shadow-sm border" style={{ borderColor: '#E5E7EB' }}>
               {exito ? (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -555,7 +553,7 @@ export default function Home() {
                       )}
 
                       {!cargandoSlots && slots.length > 0 && (
-                        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                           {slots.map(slot => (
                             <button key={slot} type="button" onClick={() => setSlotSeleccionado(slot)}
                               className="py-3 rounded-xl text-sm font-bold border transition-all"
@@ -599,7 +597,7 @@ export default function Home() {
       </section>
 
       {/* FOOTER */}
-      <footer className="py-16 px-6" style={{ backgroundColor: azul }}>
+      <footer className="py-10 sm:py-16 px-4 sm:px-6" style={{ backgroundColor: azul }}>
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10 pb-10 border-b" style={{ borderColor: '#2A4F7A' }}>
           <div>
             <div style={{ fontFamily: 'var(--font-playfair), serif' }} className="mb-4">

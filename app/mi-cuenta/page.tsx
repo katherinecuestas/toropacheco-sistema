@@ -92,7 +92,7 @@ export default function MiCuentaPage() {
     <div className="min-h-screen" style={{ backgroundColor: '#F5F7FA', fontFamily: 'var(--font-inter), sans-serif' }}>
 
       {/* NAVBAR */}
-      <nav className="border-b px-6 py-4 flex justify-between items-center" style={{ backgroundColor: azulProfundo, borderColor: '#243B55' }}>
+      <nav className="border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center gap-3" style={{ backgroundColor: azulProfundo, borderColor: '#243B55' }}>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: dorado, color: azulProfundo }}>⚖</div>
           <div>
@@ -108,7 +108,7 @@ export default function MiCuentaPage() {
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
 
         {/* Sin contratos */}
         {contratos.length === 0 && (
@@ -153,18 +153,18 @@ export default function MiCuentaPage() {
               </div>
 
               {/* Resumen financiero */}
-              <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+              <div className="grid grid-cols-3 gap-3 mt-6 pt-6 border-t" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
                 <div>
                   <p className="text-xs opacity-50 mb-0.5">Monto total</p>
-                  <p className="text-lg font-bold">{formatMonto(contrato.monto_total)}</p>
+                  <p className="text-sm sm:text-lg font-bold break-all">{formatMonto(contrato.monto_total)}</p>
                 </div>
                 <div>
                   <p className="text-xs opacity-50 mb-0.5">Pie pagado</p>
-                  <p className="text-lg font-bold" style={{ color: dorado }}>{formatMonto(contrato.monto_pie)}</p>
+                  <p className="text-sm sm:text-lg font-bold break-all" style={{ color: dorado }}>{formatMonto(contrato.monto_pie)}</p>
                 </div>
                 <div>
-                  <p className="text-xs opacity-50 mb-0.5">Saldo pendiente</p>
-                  <p className="text-lg font-bold text-red-300">{formatMonto(contrato.saldo)}</p>
+                  <p className="text-xs opacity-50 mb-0.5">Saldo</p>
+                  <p className="text-sm sm:text-lg font-bold text-red-300 break-all">{formatMonto(contrato.saldo)}</p>
                 </div>
               </div>
             </div>
@@ -224,15 +224,15 @@ export default function MiCuentaPage() {
                 ) : (
                   <div>
                     {cuotas.map(cuota => (
-                      <div key={cuota.id} className="flex items-center justify-between px-6 py-4 border-b last:border-0" style={{ borderColor: '#F3F4F6' }}>
-                        <div className="flex items-center gap-4">
+                      <div key={cuota.id} className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b last:border-0" style={{ borderColor: '#F3F4F6' }}>
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
                             style={{ backgroundColor: cuota.estado === 'pagada' ? '#10B981' : cuota.estado === 'vencida' ? '#EF4444' : azul }}>
                             {cuota.numero}
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-sm font-medium" style={{ color: azul }}>Cuota {cuota.numero}</p>
-                            <p className="text-xs" style={{ color: '#9CA3AF' }}>
+                            <p className="text-xs truncate" style={{ color: '#9CA3AF' }}>
                               Vence: {formatFecha(cuota.fecha_vencimiento)}
                               {cuota.fecha_pago && ` · Pagado: ${formatFecha(cuota.fecha_pago)}`}
                             </p>

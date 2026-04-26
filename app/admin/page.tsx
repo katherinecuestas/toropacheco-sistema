@@ -260,21 +260,28 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      <nav className="bg-gray-900 text-white px-6 h-16 flex items-center justify-between">
-        <div><span className="font-bold text-lg">Toropacheco</span><span className="text-gray-400 text-sm ml-2">/ Admin</span></div>
-        <div className="flex items-center gap-4">
-          {(['inicio', 'abogados', 'consultas', 'clientes'] as Vista[]).map(v => (
-            <button key={v} onClick={() => setVista(v)}
-              className={`text-sm capitalize ${vista === v ? 'text-white font-medium' : 'text-gray-400 hover:text-white'}`}>
-              {v}
+      <nav className="bg-gray-900 text-white">
+        <div className="h-14 flex items-center justify-between px-4 sm:px-6 gap-3">
+          <div className="flex-shrink-0">
+            <span className="font-bold">Toropacheco</span>
+            <span className="text-gray-400 text-sm ml-1.5 hidden sm:inline">/ Admin</span>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto">
+            {(['inicio', 'abogados', 'consultas', 'clientes'] as Vista[]).map(v => (
+              <button key={v} onClick={() => setVista(v)}
+                className={`text-sm capitalize whitespace-nowrap flex-shrink-0 ${vista === v ? 'text-white font-medium' : 'text-gray-400 hover:text-white'}`}>
+                {v}
+              </button>
+            ))}
+            <button onClick={async () => { await cerrarSesion(); router.push('/login') }}
+              className="text-xs sm:text-sm bg-red-600 hover:bg-red-700 px-2.5 py-1.5 rounded-lg whitespace-nowrap flex-shrink-0">
+              Salir
             </button>
-          ))}
-          <button onClick={async () => { await cerrarSesion(); router.push('/login') }}
-            className="text-sm bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg">Cerrar sesión</button>
+          </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
 
         {mensaje && (
           <div className={`mb-6 p-4 rounded-lg text-sm font-medium ${mensaje.tipo === 'exito' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
@@ -320,12 +327,12 @@ export default function AdminPage() {
         {/* ABOGADOS */}
         {vista === 'abogados' && (
           <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
               <h1 className="text-2xl font-bold text-gray-900">Abogados</h1>
               <button onClick={() => setModalCrearAbogado(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">+ Nuevo abogado</button>
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+              <table className="w-full text-sm min-w-[580px]">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>{['Nombre', 'Email', 'Teléfono', 'Rol', 'Estado', 'Acciones'].map(h => <th key={h} className="text-left px-6 py-3 text-gray-500 font-medium">{h}</th>)}</tr>
                 </thead>
@@ -354,7 +361,7 @@ export default function AdminPage() {
         {/* CONSULTAS */}
         {vista === 'consultas' && (
           <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
               <h1 className="text-2xl font-bold text-gray-900">Consultas</h1>
               <div className="flex gap-3">
                 <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
@@ -369,13 +376,13 @@ export default function AdminPage() {
             <div className="space-y-4">
               {consultasFiltradas.map(consulta => (
                 <div key={consulta.id} className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1">
+                  <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900">{consulta.asunto}</h3>
-                      <p className="text-sm text-gray-500 mt-0.5">{consulta.nombre_cliente} · {consulta.email_cliente}</p>
+                      <p className="text-sm text-gray-500 mt-0.5 truncate">{consulta.nombre_cliente} · {consulta.email_cliente}</p>
                       <p className="text-xs text-gray-400 mt-0.5">{new Date(consulta.created_at).toLocaleDateString('es-CL')}</p>
                     </div>
-                    <div className="flex items-center gap-2 ml-4">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${consulta.estado === 'nueva' ? 'bg-blue-100 text-blue-700' : consulta.estado === 'respondida' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{consulta.estado.toUpperCase()}</span>
                       <button onClick={() => abrirEditarConsulta(consulta)} className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-medium">Editar</button>
                       <button onClick={() => setConfirmarEliminar({ tipo: 'consulta', id: consulta.id })} className="text-xs px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-medium">Eliminar</button>
@@ -390,10 +397,10 @@ export default function AdminPage() {
 
         {/* CLIENTES */}
         {vista === 'clientes' && (
-          <div className="flex gap-6">
+          <div className="flex flex-col lg:flex-row gap-6">
 
             {/* Lista de clientes */}
-            <div className="w-72 flex-shrink-0">
+            <div className="w-full lg:w-72 lg:flex-shrink-0">
               <h1 className="text-xl font-bold text-gray-900 mb-4">Clientes ({clientes.length})</h1>
               <div className="space-y-2">
                 {clientes.length === 0 && <p className="text-sm text-gray-400">Sin clientes registrados.</p>}
@@ -418,17 +425,17 @@ export default function AdminPage() {
               ) : (
                 <div>
                   {/* Header cliente */}
-                  <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4 flex justify-between items-start">
-                    <div>
+                  <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4 flex flex-wrap justify-between items-start gap-3">
+                    <div className="min-w-0 flex-1">
                       <h2 className="text-xl font-bold text-gray-900">{clienteSeleccionado.nombre}</h2>
-                      <p className="text-sm text-gray-500">{clienteSeleccionado.email} {clienteSeleccionado.telefono && `· ${clienteSeleccionado.telefono}`}</p>
+                      <p className="text-sm text-gray-500 truncate">{clienteSeleccionado.email} {clienteSeleccionado.telefono && `· ${clienteSeleccionado.telefono}`}</p>
                       {clienteSeleccionado.rut && <p className="text-xs text-gray-400 mt-0.5">RUT: {clienteSeleccionado.rut}</p>}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-shrink-0">
                       <button onClick={() => { setFormContrato(EMPTY_CONTRATO); setModalContrato('crear') }}
                         className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">+ Contrato</button>
                       <button onClick={() => setConfirmarEliminar({ tipo: 'cliente', id: clienteSeleccionado.id, auth_user_id: clienteSeleccionado.auth_user_id })}
-                        className="text-sm bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-lg font-medium">Eliminar cliente</button>
+                        className="text-sm bg-red-50 text-red-600 hover:bg-red-100 px-3 py-2 rounded-lg font-medium">Eliminar</button>
                     </div>
                   </div>
 
@@ -601,7 +608,7 @@ export default function AdminPage() {
                   {abogados.filter(a => a.estado).map(a => <option key={a.id} value={a.id}>{a.nombre_negocio}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label><input type="text" value={formCrearConsulta.nombre_cliente} onChange={e => setFormCrearConsulta({ ...formCrearConsulta, nombre_cliente: e.target.value })} className={inputCls} /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Email *</label><input type="email" value={formCrearConsulta.email_cliente} onChange={e => setFormCrearConsulta({ ...formCrearConsulta, email_cliente: e.target.value })} className={inputCls} /></div>
               </div>
@@ -621,7 +628,7 @@ export default function AdminPage() {
           <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl">
             <h2 className="text-xl font-bold text-gray-900 mb-5">Editar consulta #{consultaEditando.id}</h2>
             <form onSubmit={handleEditarConsulta} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label><input type="text" value={formEditarConsulta.nombre_cliente} onChange={e => setFormEditarConsulta({ ...formEditarConsulta, nombre_cliente: e.target.value })} className={inputCls} /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input type="email" value={formEditarConsulta.email_cliente} onChange={e => setFormEditarConsulta({ ...formEditarConsulta, email_cliente: e.target.value })} className={inputCls} /></div>
               </div>
@@ -651,7 +658,7 @@ export default function AdminPage() {
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Tipo de servicio *</label><input type="text" value={formContrato.tipo_servicio} onChange={e => setFormContrato({ ...formContrato, tipo_servicio: e.target.value })} placeholder="Ej: Juicio laboral" className={inputCls} /></div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label><textarea rows={2} value={formContrato.descripcion} onChange={e => setFormContrato({ ...formContrato, descripcion: e.target.value })} className={`${inputCls} resize-none`} /></div>
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label><input type="date" value={formContrato.fecha_inicio} onChange={e => setFormContrato({ ...formContrato, fecha_inicio: e.target.value })} className={inputCls} /></div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Monto total *</label><input type="number" value={formContrato.monto_total} onChange={e => setFormContrato({ ...formContrato, monto_total: e.target.value })} placeholder="0" className={inputCls} /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Pie pagado</label><input type="number" value={formContrato.monto_pie} onChange={e => setFormContrato({ ...formContrato, monto_pie: e.target.value })} placeholder="0" className={inputCls} /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Saldo</label><input type="number" value={formContrato.saldo} onChange={e => setFormContrato({ ...formContrato, saldo: e.target.value })} placeholder="0" className={inputCls} /></div>

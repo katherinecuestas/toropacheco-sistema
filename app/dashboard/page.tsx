@@ -484,26 +484,26 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Navbar */}
       <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Toropacheco y Asociados</h1>
-            <p className="text-xs text-gray-500">Panel del abogado</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
+          <div className="flex-shrink-0">
+            <h1 className="text-sm sm:text-lg font-bold text-gray-900 leading-tight">Toropacheco</h1>
+            <p className="text-xs text-gray-500 hidden sm:block">Panel del abogado</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
             {(['consultas', 'citas', 'clientes', 'horarios'] as Vista[]).map(v => (
               <button key={v} onClick={() => setVista(v)}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${vista === v ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+                className={`px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-colors whitespace-nowrap flex-shrink-0 ${vista === v ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
                 {v.charAt(0).toUpperCase() + v.slice(1)}
               </button>
             ))}
             {abogado?.is_admin && (
-              <a href="/admin" className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 rounded-md transition-colors">
-                Panel Admin
+              <a href="/admin" className="px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 rounded-md transition-colors whitespace-nowrap flex-shrink-0">
+                Admin
               </a>
             )}
             <button onClick={async () => { await cerrarSesion(); router.push('/login') }}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors">
-              Cerrar sesión
+              className="px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors whitespace-nowrap flex-shrink-0">
+              Salir
             </button>
           </div>
         </div>
@@ -548,15 +548,15 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 {consultas.map(consulta => (
                   <div key={consulta.id} className={`border rounded-xl p-5 transition-all ${consulta.estado === 'nueva' ? 'border-blue-200 bg-blue-50' : consulta.estado === 'respondida' ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
+                    <div className="flex flex-wrap justify-between items-start gap-2 mb-3">
+                      <div className="flex-1 min-w-0">
                         <h4 className="font-semibold text-gray-900 text-lg">{consulta.asunto}</h4>
                         <p className="text-sm text-gray-600 mt-0.5">
                           {consulta.nombre_cliente} · {consulta.email_cliente}
                           {consulta.telefono_cliente && ` · ${consulta.telefono_cliente}`}
                         </p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${consulta.estado === 'nueva' ? 'bg-blue-100 text-blue-800' : consulta.estado === 'respondida' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'}`}>
+                      <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${consulta.estado === 'nueva' ? 'bg-blue-100 text-blue-800' : consulta.estado === 'respondida' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'}`}>
                         {consulta.estado.toUpperCase()}
                       </span>
                     </div>
@@ -609,7 +609,7 @@ export default function DashboardPage() {
         {/* VISTA: CITAS */}
         {vista === 'citas' && (
           <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
               <div className="flex items-center gap-3">
                 <h3 className="text-xl font-bold text-gray-900">Videollamadas</h3>
                 <div className="flex bg-gray-100 rounded-lg p-0.5">
@@ -809,16 +809,16 @@ export default function DashboardPage() {
               <p className="text-sm text-gray-500 mb-5">Define los días y horas de atención recurrentes. Los slots se generan cada 30 minutos.</p>
               <div className="space-y-3">
                 {horarios.map((h, i) => (
-                  <div key={h.dia_semana} className={`flex items-center gap-4 p-4 rounded-xl border ${h.activo ? 'border-blue-200 bg-blue-50' : 'border-gray-200 bg-gray-50'}`}>
-                    <input type="checkbox" checked={h.activo} onChange={e => { const n = [...horarios]; n[i] = { ...n[i], activo: e.target.checked }; setHorarios(n) }} className="w-5 h-5 accent-blue-600" />
-                    <span className="w-24 font-medium text-gray-700">{DIAS[h.dia_semana]}</span>
+                  <div key={h.dia_semana} className={`flex flex-wrap items-center gap-3 p-4 rounded-xl border ${h.activo ? 'border-blue-200 bg-blue-50' : 'border-gray-200 bg-gray-50'}`}>
+                    <input type="checkbox" checked={h.activo} onChange={e => { const n = [...horarios]; n[i] = { ...n[i], activo: e.target.checked }; setHorarios(n) }} className="w-5 h-5 accent-blue-600 flex-shrink-0" />
+                    <span className="w-20 font-medium text-gray-700 flex-shrink-0">{DIAS[h.dia_semana]}</span>
                     {h.activo ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <input type="time" value={h.hora_inicio} onChange={e => { const n = [...horarios]; n[i] = { ...n[i], hora_inicio: e.target.value }; setHorarios(n) }}
-                          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          className="border border-gray-300 rounded-lg px-2 sm:px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                         <span className="text-gray-400">→</span>
                         <input type="time" value={h.hora_fin} onChange={e => { const n = [...horarios]; n[i] = { ...n[i], hora_fin: e.target.value }; setHorarios(n) }}
-                          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          className="border border-gray-300 rounded-lg px-2 sm:px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                       </div>
                     ) : (
                       <span className="text-sm text-gray-400">No disponible</span>
@@ -929,7 +929,7 @@ export default function DashboardPage() {
               {slotsNueva.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Horario *</label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {slotsNueva.map(slot => (
                       <button key={slot} type="button" onClick={() => setFormNuevaCita(f => ({ ...f, slot }))}
                         className={`py-2 rounded-lg text-sm font-medium border transition-colors ${formNuevaCita.slot === slot ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'}`}>
@@ -977,7 +977,7 @@ export default function DashboardPage() {
               {slotsEditar.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Horario</label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {slotsEditar.map(slot => (
                       <button key={slot} type="button" onClick={() => setFormEditarCita(f => ({ ...f, slot }))}
                         className={`py-2 rounded-lg text-sm font-medium border transition-colors ${formEditarCita.slot === slot ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'}`}>

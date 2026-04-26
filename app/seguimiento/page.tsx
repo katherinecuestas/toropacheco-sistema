@@ -135,7 +135,7 @@ function SeguimientoContent() {
   const estado = estadoConfig[consulta!.estado]
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-gray-50 py-8 sm:py-12 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Toropacheco y Asociados</h1>
@@ -143,9 +143,9 @@ function SeguimientoContent() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">{consulta!.asunto}</h2>
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${estado.color}`}>
+          <div className="flex flex-wrap items-start justify-between gap-2 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex-1 min-w-0 pr-2">{consulta!.asunto}</h2>
+            <span className={`shrink-0 px-3 py-1 rounded-full text-sm font-medium ${estado.color}`}>
               {estado.icono} {estado.label}
             </span>
           </div>
@@ -258,7 +258,7 @@ function SeguimientoContent() {
                 {!cargandoSlots && slots.length > 0 && (
                   <div>
                     <label className="block text-sm text-gray-400 mb-2">Selecciona un horario</label>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {slots.map(slot => (
                         <button key={slot} onClick={() => setSlotSeleccionado(slot)}
                           className={`py-2 rounded-lg text-sm font-medium transition-colors ${slotSeleccionado === slot ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
@@ -270,8 +270,13 @@ function SeguimientoContent() {
                 )}
                 {slotSeleccionado && (
                   <button onClick={handleAgendar} disabled={agendando}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50">
-                    {agendando ? 'Agendando...' : `Confirmar ${fechaSeleccionada} a las ${slotSeleccionado}`}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50 text-sm sm:text-base">
+                    {agendando ? 'Agendando...' : (
+                      <>
+                        <span className="block sm:hidden">Confirmar cita</span>
+                        <span className="hidden sm:block">{`Confirmar ${fechaSeleccionada} a las ${slotSeleccionado}`}</span>
+                      </>
+                    )}
                   </button>
                 )}
                 <button onClick={() => { setMostrarAgenda(false); setFechaSeleccionada(''); setSlotSeleccionado('') }}
