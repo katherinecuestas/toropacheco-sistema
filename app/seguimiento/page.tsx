@@ -202,15 +202,17 @@ export default function SeguimientoPage() {
                 weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
               })}
             </p>
-            {cita.whereby_room_url && (
+            {cita.meeting_url ? (
               <a
-                href={cita.whereby_room_url}
+                href={cita.meeting_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block mt-4 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
               >
-                Ingresar a videollamada →
+                Ingresar a la reunión →
               </a>
+            ) : (
+              <p className="text-sm text-indigo-600 mt-3">El abogado te enviará el enlace de la reunión próximamente.</p>
             )}
           </div>
         )}
@@ -225,16 +227,20 @@ export default function SeguimientoPage() {
                 weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
               })}
             </p>
-            <p className="text-gray-500 text-sm mb-4">Te enviamos el enlace de la videollamada a tu email.</p>
-            {cita.whereby_room_url && (
-              <a
-                href={cita.whereby_room_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-green-700 transition-colors"
-              >
-                Ingresar a videollamada →
-              </a>
+            {cita.meeting_url ? (
+              <>
+                <p className="text-gray-500 text-sm mb-4">Ingresa a la reunión con el siguiente enlace:</p>
+                <a
+                  href={cita.meeting_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-green-700 transition-colors"
+                >
+                  Ingresar a la reunión →
+                </a>
+              </>
+            ) : (
+              <p className="text-gray-500 text-sm mb-4">El abogado te enviará el enlace de la reunión próximamente a tu email.</p>
             )}
           </div>
         )}

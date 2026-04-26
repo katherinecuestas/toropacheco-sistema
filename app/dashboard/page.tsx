@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const [citas, setCitas] = useState<Cita[]>([])
   const [filtroCitas, setFiltroCitas] = useState<'proximas' | 'todas'>('proximas')
   const [citaEditando, setCitaEditando] = useState<Cita | null>(null)
-  const [formEditarCita, setFormEditarCita] = useState({ fecha: '', slot: '', notas: '', estado: 'confirmada' })
+  const [formEditarCita, setFormEditarCita] = useState({ fecha: '', slot: '', notas: '', estado: 'confirmada', meeting_url: '' })
   const [slotsEditar, setSlotsEditar] = useState<string[]>([])
   const [cargandoSlotsEditar, setCargandoSlotsEditar] = useState(false)
   const [guardandoCita, setGuardandoCita] = useState(false)
@@ -46,7 +46,7 @@ export default function DashboardPage() {
 
   // Nueva cita
   const [modalNuevaCita, setModalNuevaCita] = useState(false)
-  const [formNuevaCita, setFormNuevaCita] = useState({ nombre: '', email: '', fecha: '', slot: '' })
+  const [formNuevaCita, setFormNuevaCita] = useState({ nombre: '', email: '', fecha: '', slot: '', meeting_url: '' })
   const [slotsNueva, setSlotsNueva] = useState<string[]>([])
   const [cargandoSlotsNueva, setCargandoSlotsNueva] = useState(false)
   const [agendando, setAgendando] = useState(false)
@@ -65,8 +65,6 @@ export default function DashboardPage() {
   const [modalComprobante, setModalComprobante] = useState<{ cuota: any; contratoId: number } | null>(null)
   const [formComprobante, setFormComprobante] = useState({ comprobante: '', fecha_pago: '' })
   const [archivoPDF, setArchivoPDF] = useState<File | null>(null)
-  const [verificando, setVerificando] = useState(false)
-  const [resultadoIA, setResultadoIA] = useState<any | null>(null)
   const [guardandoComprobante, setGuardandoComprobante] = useState(false)
   const [sesionToken, setSesionToken] = useState<string>('')
 
@@ -198,13 +196,14 @@ export default function DashboardPage() {
         nombreCliente: formNuevaCita.nombre,
         emailCliente: formNuevaCita.email,
         fechaHora: `${formNuevaCita.fecha}T${formNuevaCita.slot}:00`,
+        meetingUrl: formNuevaCita.meeting_url || undefined,
       }),
     })
     const resultado = await res.json()
     if (resultado.success) {
-      mostrarMensaje('exito', 'Videollamada agendada. El cliente recibirá el enlace por email.')
+      mostrarMensaje('exito', formNuevaCita.meeting_url ? 'Cita agendada y enlace enviado al cliente.' : 'Cita agendada. Recuerda agregar el enlace de la reunión.')
       setModalNuevaCita(false)
-      setFormNuevaCita({ nombre: '', email: '', fecha: '', slot: '' })
+      setFormNuevaCita({ nombre: '', email: '', fecha: '', slot: '', meeting_url: '' })
       setSlotsNueva([])
       const { citas: nuevasCitas } = await obtenerMisCitas(abogado.id)
       if (nuevasCitas) setCitas(nuevasCitas)
@@ -229,7 +228,7 @@ export default function DashboardPage() {
     const hora = new Date(cita.fecha_hora)
     const slot = `${String(hora.getHours()).padStart(2, '0')}:${String(hora.getMinutes()).padStart(2, '0')}`
     setCitaEditando(cita)
-    setFormEditarCita({ fecha, slot, notas: cita.notas || '', estado: cita.estado })
+    setFormEditarCita({ fecha, slot, notas: cita.notas || '', estado: cita.estado, meeting_url: cita.meeting_url || '' })
     setSlotsEditar([slot])
   }
 
@@ -241,6 +240,7 @@ export default function DashboardPage() {
       fecha_hora: `${formEditarCita.fecha}T${formEditarCita.slot}:00`,
       notas: formEditarCita.notas,
       estado: formEditarCita.estado,
+      meeting_url: formEditarCita.meeting_url || undefined,
     })
     if (result.success) {
       mostrarMensaje('exito', 'Cita actualizada.')
@@ -446,26 +446,10 @@ export default function DashboardPage() {
     await recargarClientes()
     setModalComprobante(null)
     setArchivoPDF(null)
-    setResultadoIA(null)
     setGuardandoComprobante(false)
     mostrarMensaje('exito', 'Cuota marcada como pagada.')
   }
 
-  async function handleVerificarComprobante() {
-    if (!archivoPDF || !modalComprobante) return
-    setVerificando(true)
-    setResultadoIA(null)
-    const fd = new FormData()
-    fd.append('archivo', archivoPDF)
-    fd.append('monto_esperado', String(modalComprobante.cuota.monto))
-    const res = await fetch('/api/verificar-comprobante', { method: 'POST', body: fd })
-    const data = await res.json()
-    setResultadoIA(data)
-    setVerificando(false)
-    if (data.referencia_detectada && !formComprobante.comprobante) {
-      setFormComprobante(f => ({ ...f, comprobante: data.referencia_detectada }))
-    }
-  }
 
   async function handleEliminarCuota(cuotaId: number, contratoId: number) {
     await fetch('/api/mis-cuotas', {
@@ -670,8 +654,8 @@ export default function DashboardPage() {
                           {cita.notas && <p className="text-sm text-gray-500 mt-1">📝 {cita.notas}</p>}
                         </div>
                         <div className="flex flex-col gap-2 ml-4">
-                          {cita.whereby_host_url && cita.estado !== 'cancelada' && (
-                            <a href={cita.whereby_host_url} target="_blank" rel="noopener noreferrer"
+                          {cita.meeting_url && cita.estado !== 'cancelada' && (
+                            <a href={cita.meeting_url} target="_blank" rel="noopener noreferrer"
                               className="text-xs px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors text-center">
                               Ingresar →
                             </a>
@@ -955,11 +939,15 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Link de reunión (Zoom / Meet) <span className="text-gray-400 font-normal">— opcional</span></label>
+                <input type="url" value={formNuevaCita.meeting_url} onChange={e => setFormNuevaCita(f => ({ ...f, meeting_url: e.target.value }))} placeholder="https://zoom.us/j/... o https://meet.google.com/..." className={inputCls} />
+              </div>
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={agendando} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50">
-                  {agendando ? 'Agendando...' : 'Confirmar videollamada'}
+                  {agendando ? 'Agendando...' : 'Confirmar cita'}
                 </button>
-                <button type="button" onClick={() => { setModalNuevaCita(false); setFormNuevaCita({ nombre: '', email: '', fecha: '', slot: '' }); setSlotsNueva([]) }}
+                <button type="button" onClick={() => { setModalNuevaCita(false); setFormNuevaCita({ nombre: '', email: '', fecha: '', slot: '', meeting_url: '' }); setSlotsNueva([]) }}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-xl text-sm transition-colors">
                   Cancelar
                 </button>
@@ -1006,6 +994,10 @@ export default function DashboardPage() {
                   <option value="cancelada">Cancelada</option>
                   <option value="completada">Completada</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Link de reunión (Zoom / Meet)</label>
+                <input type="url" value={formEditarCita.meeting_url} onChange={e => setFormEditarCita(f => ({ ...f, meeting_url: e.target.value }))} placeholder="https://zoom.us/j/... o https://meet.google.com/..." className={inputCls} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notas internas</label>
@@ -1116,35 +1108,16 @@ export default function DashboardPage() {
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Adjuntar comprobante (PDF o imagen)</label>
                 <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp"
-                  onChange={e => { setArchivoPDF(e.target.files?.[0] ?? null); setResultadoIA(null) }}
+                  onChange={e => setArchivoPDF(e.target.files?.[0] ?? null)}
                   className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
-                {archivoPDF && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <p className="text-xs text-gray-500 flex-1">✓ {archivoPDF.name}</p>
-                    <button type="button" onClick={handleVerificarComprobante} disabled={verificando}
-                      className="text-xs px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium disabled:opacity-50 transition-colors">
-                      {verificando ? 'Verificando...' : 'Verificar con IA'}
-                    </button>
-                  </div>
-                )}
-                {resultadoIA && (
-                  <div className={`mt-2 rounded-lg p-3 text-xs space-y-1 ${resultadoIA.es_comprobante_valido && resultadoIA.monto_coincide ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                    <p className={`font-semibold ${resultadoIA.es_comprobante_valido && resultadoIA.monto_coincide ? 'text-green-700' : 'text-red-700'}`}>
-                      {resultadoIA.es_comprobante_valido && resultadoIA.monto_coincide ? '✓ Comprobante válido' : '⚠ Verificación con observaciones'}
-                    </p>
-                    {resultadoIA.monto_detectado && <p className="text-gray-600">Monto detectado: <span className="font-medium">${Number(resultadoIA.monto_detectado).toLocaleString('es-CL')}</span></p>}
-                    {resultadoIA.fecha_detectada && <p className="text-gray-600">Fecha: <span className="font-medium">{resultadoIA.fecha_detectada}</span></p>}
-                    {resultadoIA.referencia_detectada && <p className="text-gray-600">Referencia: <span className="font-medium">{resultadoIA.referencia_detectada}</span></p>}
-                    <p className="text-gray-500 italic">{resultadoIA.observacion}</p>
-                  </div>
-                )}
+                {archivoPDF && <p className="text-xs text-green-600 mt-1">✓ {archivoPDF.name}</p>}
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={guardandoComprobante}
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 rounded-xl text-sm disabled:opacity-50">
                   {guardandoComprobante ? 'Guardando...' : 'Confirmar pago'}
                 </button>
-                <button type="button" onClick={() => { setModalComprobante(null); setArchivoPDF(null); setResultadoIA(null) }}
+                <button type="button" onClick={() => { setModalComprobante(null); setArchivoPDF(null) }}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-xl text-sm">
                   Cancelar
                 </button>

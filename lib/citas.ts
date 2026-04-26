@@ -18,9 +18,7 @@ export interface Cita {
   email_cliente: string
   fecha_hora: string
   estado: string
-  whereby_room_url?: string
-  whereby_host_url?: string
-  whereby_meeting_id?: string
+  meeting_url?: string
   duracion_minutos: number
   notas?: string
 }
@@ -62,6 +60,15 @@ export async function guardarDisponibilidad(
 }
 
 export async function obtenerSlotsDisponibles(abogadoId: number, fechaISO: string) {
+  const { data: bloqueada } = await supabase
+    .from('fechas_bloqueadas')
+    .select('id')
+    .eq('abogado_id', abogadoId)
+    .eq('fecha', fechaISO)
+    .maybeSingle()
+
+  if (bloqueada) return { slots: [] }
+
   const [y, m, d] = fechaISO.split('-').map(Number)
   const fecha = new Date(y, m - 1, d)
   const diaSemana = fecha.getDay() === 0 ? 7 : fecha.getDay()
@@ -144,7 +151,7 @@ export async function toggleFechaBloqueada(abogadoId: number, fecha: string, blo
   return { success: true }
 }
 
-export async function editarCita(id: number, datos: { fecha_hora: string; notas?: string; estado: string }) {
+export async function editarCita(id: number, datos: { fecha_hora: string; notas?: string; estado: string; meeting_url?: string }) {
   const res = await fetch('/api/citas', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

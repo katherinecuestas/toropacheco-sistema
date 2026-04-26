@@ -6,13 +6,13 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// PUT → editar cita (fecha, notas, estado)
+// PUT → editar cita (fecha, notas, estado, meeting_url)
 export async function PUT(request: NextRequest) {
   try {
-    const { id, fecha_hora, notas, estado } = await request.json()
+    const { id, fecha_hora, notas, estado, meeting_url } = await request.json()
     const { data, error } = await supabaseAdmin
       .from('citas')
-      .update({ fecha_hora, notas, estado })
+      .update({ fecha_hora, notas, estado, meeting_url })
       .eq('id', id)
       .select()
       .single()

@@ -10,32 +10,9 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { consultaId, abogadoId, nombreCliente, emailCliente, fechaHora } = await request.json()
+    const { consultaId, abogadoId, nombreCliente, emailCliente, fechaHora, meetingUrl } = await request.json()
 
-    // 1. Crear sala en Whereby
-    const endDate = new Date(fechaHora)
-    endDate.setHours(endDate.getHours() + 2)
-
-    const wherebyRes = await fetch('https://api.whereby.dev/v1/meetings', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.WHEREBY_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        endDate: endDate.toISOString(),
-        fields: ['hostRoomUrl'],
-      }),
-    })
-
-    if (!wherebyRes.ok) {
-      const err = await wherebyRes.text()
-      return NextResponse.json({ success: false, error: `Whereby: ${err}` }, { status: 400 })
-    }
-
-    const whereby = await wherebyRes.json()
-
-    // 2. Guardar cita en Supabase (usando service role para saltarse RLS en insert desde server)
+    // 1. Guardar cita en Supabase
     const { data: cita, error: citaError } = await supabaseAdmin
       .from('citas')
       .insert({
@@ -45,9 +22,7 @@ export async function POST(request: NextRequest) {
         email_cliente: emailCliente,
         fecha_hora: fechaHora,
         estado: 'confirmada',
-        whereby_room_url: whereby.roomUrl,
-        whereby_host_url: whereby.hostRoomUrl,
-        whereby_meeting_id: whereby.meetingId,
+        ...(meetingUrl ? { meeting_url: meetingUrl } : {}),
       })
       .select()
       .single()
@@ -56,7 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: citaError.message }, { status: 400 })
     }
 
-    // 3. Enviar email al cliente con el link de la videollamada
+    // 2. Enviar email al cliente
     const fechaFormateada = new Date(fechaHora).toLocaleString('es-CL', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
       hour: '2-digit', minute: '2-digit'
@@ -75,16 +50,20 @@ export async function POST(request: NextRequest) {
           <div style="background: #f0f4ff; padding: 16px; border-radius: 8px; margin: 16px 0; text-align: center;">
             <p style="font-size: 18px; font-weight: bold; color: #1e40af; margin: 0;">${fechaFormateada}</p>
           </div>
-          <p>Ingresa a tu videollamada haciendo click aquí:</p>
+          ${meetingUrl ? `
+          <p>Ingresa a tu reunión haciendo click aquí:</p>
           <div style="text-align: center; margin: 24px 0;">
             <a
-              href="${whereby.roomUrl}"
+              href="${meetingUrl}"
               style="background-color: #2563eb; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;"
             >
-              Ingresar a videollamada
+              Ingresar a la reunión
             </a>
           </div>
-          <p style="color: #888; font-size: 13px;">O copia este enlace: ${whereby.roomUrl}</p>
+          <p style="color: #888; font-size: 13px;">O copia este enlace: ${meetingUrl}</p>
+          ` : `
+          <p style="color: #555;">El abogado te enviará el enlace de la reunión (Zoom o Google Meet) próximamente a este email.</p>
+          `}
           <p style="color: #888; font-size: 12px;">La duración de la consulta es de 30 minutos.</p>
           <hr style="border: 1px solid #eee;" />
           <p style="color: #888; font-size: 12px;">Toropacheco y Asociados — Sistema Legal</p>

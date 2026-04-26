@@ -111,34 +111,30 @@ export default function Home() {
     <main className="min-h-screen bg-white" style={{ fontFamily: 'var(--font-inter), sans-serif' }}>
 
       {/* NAVBAR */}
-      <nav className="fixed top-0 w-full z-50 border-b" style={{ backgroundColor: '#FDFBF5', borderColor: '#EDE8DC' }}>
+      <nav className="fixed top-0 w-full z-50" style={{ backgroundColor: azulProfundo }}>
         <div className="max-w-7xl mx-auto px-6 h-18 flex justify-between items-center py-4">
-          <div style={{ fontFamily: 'var(--font-playfair), serif' }}>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                style={{ backgroundColor: azul }}>⚖</div>
-              <div>
-                <span className="text-base font-bold tracking-wide" style={{ color: azul }}>TORO PACHECO</span>
-                <span className="text-xs font-normal ml-1" style={{ color: dorado }}>&amp; ASOCIADOS</span>
-              </div>
-            </div>
+          <div>
+            <img src="/logo_claro.png" alt="Toro Pacheco & Asociados" className="h-16 w-auto" />
           </div>
-          <div className="hidden md:flex gap-8 text-sm font-medium">
-            <a href="#servicios" className="text-[#1F3A5F] transition-colors hover:text-[#C7B88A]">Servicios</a>
-            <a href="#como-funciona" className="text-[#1F3A5F] transition-colors hover:text-[#C7B88A]">Proceso</a>
-            <a href="#consulta" className="text-[#1F3A5F] transition-colors hover:text-[#C7B88A]">Contacto</a>
-            <a href="/login" className="text-[#1F3A5F] transition-colors hover:text-[#C7B88A]">Mi cuenta</a>
+          <div className="hidden md:flex gap-8 text-base font-medium">
+            <a href="#servicios" className="text-white transition-colors hover:text-[#C7B88A]">Servicios</a>
+            <a href="#como-funciona" className="text-white transition-colors hover:text-[#C7B88A]">Proceso</a>
+            <a href="#consulta" className="text-white transition-colors hover:text-[#C7B88A]">Contacto</a>
+            <a href="/login" className="text-white transition-colors hover:text-[#C7B88A]">Mi cuenta</a>
           </div>
           <div className="flex items-center gap-2">
             <a href="/registro-cliente" className="hidden md:flex items-center text-sm font-semibold px-4 py-2.5 rounded-full border transition-colors"
-              style={{ borderColor: azul, color: azul }}>
+              style={{ borderColor: dorado + '66', color: dorado }}>
               Crear cuenta
             </a>
-          <button onClick={() => { setTab('video'); document.getElementById('consulta')?.scrollIntoView({ behavior: 'smooth' }) }}
-            className="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-full transition-colors"
-            style={{ backgroundColor: azul, color: dorado }}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M4 8h8a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4a2 2 0 012-2z" />
+          <button
+            onClick={() => { setTab('video'); document.getElementById('consulta')?.scrollIntoView({ behavior: 'smooth' }) }}
+            className="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-full transition-all hover:opacity-90"
+            style={{ backgroundColor: dorado, color: azulProfundo, boxShadow: '0 4px 14px 0 rgba(199,184,138,0.3)' }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={azulProfundo} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/>
+              <rect x="2" y="6" width="14" height="12" rx="3"/>
             </svg>
             Videollamada
           </button>
@@ -146,14 +142,17 @@ export default function Home() {
         </div>
       </nav>
       {/* HERO */}
-      <section className="min-h-screen flex items-start pt-20" style={{ backgroundColor: '#FDFBF5' }}>
+      <section className="min-h-screen flex items-start pt-20 relative" style={{ backgroundColor: '#FDFBF5' }}>
+        <div className="absolute top-0 left-0 right-0 h-28 pointer-events-none z-10"
+          style={{ background: `linear-gradient(to bottom, ${azulProfundo}, transparent)` }} />
         <div className="max-w-7xl mx-auto px-6 w-full">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end py-1 relative">
-            {/* Columna izquierda — texto */}
-            <div className="lg:col-span-4 flex flex-col justify-end pb-12 relative z-10">
-              
-              <h1 className="text-6xl md:text-7xl font-bold leading-tight mb-6"
-                style={{ fontFamily: 'var(--font-playfair), serif' }}>
+
+            {/* Cambiamos justify-end por justify-center para que flote más arriba y quitamos el padding inferior excesivo */}
+            <div className="lg:col-span-4 flex flex-col justify-center pb-24 relative z-10">
+
+              <h1 className="text-6xl md:text-7xl font-bold leading-[0.9] mb-6 backdrop-blur-sm rounded-2xl px-4 py-3 -mx-4"
+    style={{ fontFamily: 'var(--font-playfair), serif', letterSpacing: '-0.02em', backgroundColor: 'rgba(253,251,245,0.55)' }}>
                 <span style={{ color: azul }}>Protegemos</span><br />
                 <span style={{ color: azul }}>lo que más</span><br />
                 <span style={{ color: dorado }}>te importa</span>
@@ -176,8 +175,6 @@ export default function Home() {
                 {[
                   { número: '24h', texto: 'Tiempo de respuesta' },
                   { número: '90%', texto: 'Tasa de éxito' },
-
-                  
                 ].map(stat => (
                   <div key={stat.texto}>
                     <p className="text-3xl font-bold" style={{ fontFamily: 'var(--font-playfair), serif', color: azul }}>
@@ -190,33 +187,37 @@ export default function Home() {
             </div>
 
             {/* Columna central — imagen sin fondo */}
-            <div className="lg:col-span-5 flex items-end justify-center h-full relative z-20" style={{ marginLeft: '-8rem', marginRight: '-3rem' }}>
-              <div className="w-full h-[800px] relative flex items-end justify-center">
-                <img
-                  src="/justicia2.png"
-                  alt="Toro Pacheco & Asociados"
-                  className="h-full w-auto object-contain object-bottom drop-shadow-2xl"
-                  style={{ maxWidth: '160%' }}
-                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                />
+            <div className="lg:col-span-5 flex items-end justify-center h-full relative z-20" style={{ marginLeft: '-4rem', marginRight: '-2rem' }}>
+            <div className="w-full h-[750px] relative flex items-end justify-center">
+              <img
+                src="/justicia2.png"
+                alt="Toro Pacheco & Asociados"
+                className="h-full w-auto object-contain object-bottom drop-shadow-2xl"
+                style={{
+                  maxWidth: '140%',
+                  // ESTO ELIMINA EL CORTE RECTO ABAJO:
+                  maskImage: 'linear-gradient(to top, transparent 0%, black 15%)',
+                  WebkitMaskImage: 'linear-gradient(to top, transparent 0%, black 15%)'
+                }}
+              />
                 {/* Tagline superpuesto */}
-                <div className="absolute -bottom-6 left-0 right-0">
-                  <div className="mx-6 rounded-2xl px-6 py-4 border" style={{ backgroundColor: azulProfundo, borderColor: dorado + '55', boxShadow: '0 8px 32px rgba(22,43,70,0.45)' }}>
-                    <p className="text-xs font-bold tracking-[0.25em] text-center uppercase" style={{ color: dorado }}>
-                      Justicia · Tradición · Confianza
-                    </p>
-                    <div className="mt-2 flex justify-center gap-1">
-                      {[0,1,2].map(i => (
-                        <div key={i} className="h-px w-6 rounded-full" style={{ backgroundColor: dorado, opacity: i === 1 ? 1 : 0.35 }} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <div className="absolute -bottom-5 left-0 right-0 flex justify-center">
+  <div className="rounded-full px-10 py-3.5 border"
+    style={{
+      backgroundColor: azulProfundo,
+      borderColor: dorado + '55',
+      boxShadow: '0 8px 30px rgba(0,0,0,0.25)'
+    }}>
+    <p className="text-[10px] font-bold tracking-[0.45em] text-center uppercase" style={{ color: dorado }}>
+      Justicia &nbsp;·&nbsp; Tradición &nbsp;·&nbsp; Confianza
+    </p>
+  </div>
+</div>
               </div>
             </div>
 
-            {/* Columna derecha — servicios */}
-            <div className="lg:col-span-3 flex flex-col justify-end pb-28 space-y-3 relative z-10">
+                {/* Reducimos el padding bottom para que la gravedad la baje un poco más hacia la base del Hero */}
+                <div className="lg:col-span-3 flex flex-col justify-end pb-16 space-y-3 relative z-10">
               <p className="text-xs font-bold tracking-widest mb-2" style={{ color: dorado }}>ÁREAS DE PRÁCTICA</p>
               {[
                 { icon: '⚖️', titulo: 'Derecho Laboral', desc: 'Despidos, finiquitos y acoso laboral.' },
@@ -230,10 +231,10 @@ export default function Home() {
                   style={{ borderColor: i === 0 ? azul : '#EDE8DC', backgroundColor: i === 0 ? azul : 'white' }}>
                   <span className="text-2xl flex-shrink-0">{s.icon}</span>
                   <div>
-                    <p className="text-base font-bold leading-tight" style={{ color: i === 0 ? dorado : azul }}>
+                    <p className="text-base font-bold leading-tight" style={{ color: i === 0 ? '#FFFFFF' : azul }}>
                       {s.titulo}
                     </p>
-                    <p className="text-sm mt-0.5 leading-relaxed" style={{ color: i === 0 ? '#C7B88A99' : '#9CA3AF' }}>
+                    <p className="text-sm mt-0.5 leading-relaxed" style={{ color: i === 0 ? '#EDE8DC' : '#6B7280' }}>
                       {s.desc}
                     </p>
                   </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { iniciarSesion } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 const azul = '#1F3A5F'
 const dorado = '#C7B88A'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const registroOk = searchParams.get('registro') === 'ok'
@@ -30,7 +30,6 @@ export default function LoginPage() {
       return
     }
 
-    // Detectar tipo de usuario
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setError('Error al obtener sesión.'); setLoading(false); return }
 
@@ -46,7 +45,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: '#FDFBF5', fontFamily: 'var(--font-inter), sans-serif' }}>
       <div className="w-full max-w-md">
-
         <div className="text-center mb-8">
           <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold mx-auto mb-3"
             style={{ backgroundColor: azul }}>⚖</div>
@@ -57,19 +55,16 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-2xl shadow-sm border p-8" style={{ backgroundColor: 'white', borderColor: '#EDE8DC' }}>
-
           {registroOk && (
             <div className="mb-4 px-4 py-3 rounded-xl text-sm border" style={{ backgroundColor: '#F0FDF4', borderColor: '#BBF7D0', color: '#15803D' }}>
               ¡Cuenta creada! Ya puedes iniciar sesión.
             </div>
           )}
-
           {error && (
             <div className="mb-4 px-4 py-3 rounded-xl text-sm border" style={{ backgroundColor: '#FEF2F2', borderColor: '#FECACA', color: '#DC2626' }}>
               {error}
             </div>
           )}
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold mb-1.5 tracking-wide" style={{ color: azul }}>Email</label>
@@ -89,7 +84,6 @@ export default function LoginPage() {
               {loading ? 'Ingresando...' : 'Ingresar'}
             </button>
           </form>
-
           <div className="mt-6 pt-6 border-t text-center space-y-2" style={{ borderColor: '#F3F4F6' }}>
             <p className="text-sm" style={{ color: '#9CA3AF' }}>
               ¿Eres cliente nuevo?{' '}
@@ -99,5 +93,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }
