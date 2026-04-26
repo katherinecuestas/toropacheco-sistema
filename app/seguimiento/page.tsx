@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { obtenerSlotsDisponibles, obtenerCitaPorConsulta } from '@/lib/citas'
 import type { Consulta } from '@/lib/consultas'
 import type { Cita } from '@/lib/citas'
 
-export default function SeguimientoPage() {
+function SeguimientoContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
   const [consulta, setConsulta] = useState<Consulta | null>(null)
@@ -15,7 +15,6 @@ export default function SeguimientoPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Agendamiento
   const [mostrarAgenda, setMostrarAgenda] = useState(false)
   const [fechaSeleccionada, setFechaSeleccionada] = useState('')
   const [slots, setSlots] = useState<string[]>([])
@@ -93,7 +92,6 @@ export default function SeguimientoPage() {
     setAgendando(false)
   }
 
-  // Generar fechas disponibles (próximos 30 días, excluyendo domingos)
   function getFechasDisponibles() {
     const fechas = []
     const hoy = new Date()
@@ -139,13 +137,11 @@ export default function SeguimientoPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-2xl mx-auto">
-
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Toropacheco y Asociados</h1>
           <p className="text-gray-500 text-sm mt-1">Estado de tu consulta legal</p>
         </div>
 
-        {/* Estado */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">{consulta!.asunto}</h2>
@@ -160,13 +156,11 @@ export default function SeguimientoPage() {
           </p>
         </div>
 
-        {/* Tu mensaje */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
           <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Tu consulta</h3>
           <p className="text-gray-700 leading-relaxed">{consulta!.mensaje}</p>
         </div>
 
-        {/* Respuesta del abogado */}
         {consulta!.estado === 'respondida' && consulta!.respuesta && (
           <div className="bg-green-50 border border-green-200 rounded-2xl p-6 mb-6">
             <h3 className="text-sm font-semibold text-green-700 uppercase tracking-wide mb-3">
@@ -183,7 +177,6 @@ export default function SeguimientoPage() {
           </div>
         )}
 
-        {/* En espera */}
         {consulta!.estado === 'nueva' && (
           <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-6 text-center">
             <p className="text-blue-700 font-medium">Tu consulta está siendo revisada</p>
@@ -191,7 +184,6 @@ export default function SeguimientoPage() {
           </div>
         )}
 
-        {/* Cita existente */}
         {cita && !citaConfirmada && (
           <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-6 mb-6">
             <h3 className="text-sm font-semibold text-indigo-700 uppercase tracking-wide mb-3">
@@ -203,21 +195,16 @@ export default function SeguimientoPage() {
               })}
             </p>
             {cita.meeting_url ? (
-              <a
-                href={cita.meeting_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block mt-4 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
-              >
+              <a href={cita.meeting_url} target="_blank" rel="noopener noreferrer"
+                className="inline-block mt-4 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors">
                 Ingresar a la reunión →
               </a>
             ) : (
-              <p className="text-sm text-indigo-600 mt-3">El abogado te enviará el enlace de la reunión próximamente.</p>
+              <p className="text-sm text-indigo-600 mt-3">El abogado te enviará el enlace próximamente.</p>
             )}
           </div>
         )}
 
-        {/* Confirmación recién agendada */}
         {citaConfirmada && cita && (
           <div className="bg-green-50 border border-green-200 rounded-2xl p-6 mb-6 text-center">
             <div className="text-4xl mb-3">🎉</div>
@@ -228,49 +215,32 @@ export default function SeguimientoPage() {
               })}
             </p>
             {cita.meeting_url ? (
-              <>
-                <p className="text-gray-500 text-sm mb-4">Ingresa a la reunión con el siguiente enlace:</p>
-                <a
-                  href={cita.meeting_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-green-700 transition-colors"
-                >
-                  Ingresar a la reunión →
-                </a>
-              </>
+              <a href={cita.meeting_url} target="_blank" rel="noopener noreferrer"
+                className="inline-block bg-green-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-green-700 transition-colors">
+                Ingresar a la reunión →
+              </a>
             ) : (
-              <p className="text-gray-500 text-sm mb-4">El abogado te enviará el enlace de la reunión próximamente a tu email.</p>
+              <p className="text-gray-500 text-sm mb-4">El abogado te enviará el enlace a tu email.</p>
             )}
           </div>
         )}
 
-        {/* CTA Agendar videollamada */}
         {consulta!.estado === 'respondida' && !cita && !citaConfirmada && (
           <div className="bg-gray-900 rounded-2xl p-6 text-white mb-6">
             <h3 className="text-lg font-bold mb-2">¿Quieres continuar con tu caso?</h3>
-            <p className="text-gray-400 text-sm mb-4">
-              Agenda una videoconsulta de 30 minutos con nuestro abogado.
-            </p>
+            <p className="text-gray-400 text-sm mb-4">Agenda una videoconsulta de 30 minutos con nuestro abogado.</p>
             {!mostrarAgenda ? (
-              <button
-                onClick={() => setMostrarAgenda(true)}
-                className="bg-white text-gray-900 font-semibold px-6 py-3 rounded-xl hover:bg-gray-100 transition-colors"
-              >
+              <button onClick={() => setMostrarAgenda(true)}
+                className="bg-white text-gray-900 font-semibold px-6 py-3 rounded-xl hover:bg-gray-100 transition-colors">
                 Agendar videollamada
               </button>
             ) : (
               <div className="space-y-4">
-                {error && (
-                  <p className="text-red-400 text-sm">{error}</p>
-                )}
+                {error && <p className="text-red-400 text-sm">{error}</p>}
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Selecciona una fecha</label>
-                  <select
-                    value={fechaSeleccionada}
-                    onChange={e => handleFechaChange(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+                  <select value={fechaSeleccionada} onChange={e => handleFechaChange(e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">-- Elige una fecha --</option>
                     {getFechasDisponibles().map(f => (
                       <option key={f} value={f}>
@@ -281,56 +251,46 @@ export default function SeguimientoPage() {
                     ))}
                   </select>
                 </div>
-
                 {cargandoSlots && <p className="text-gray-400 text-sm">Cargando horarios...</p>}
-
                 {!cargandoSlots && fechaSeleccionada && slots.length === 0 && (
                   <p className="text-gray-400 text-sm">No hay horarios disponibles para ese día.</p>
                 )}
-
                 {!cargandoSlots && slots.length > 0 && (
                   <div>
                     <label className="block text-sm text-gray-400 mb-2">Selecciona un horario</label>
                     <div className="grid grid-cols-4 gap-2">
                       {slots.map(slot => (
-                        <button
-                          key={slot}
-                          onClick={() => setSlotSeleccionado(slot)}
-                          className={`py-2 rounded-lg text-sm font-medium transition-colors ${
-                            slotSeleccionado === slot
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                          }`}
-                        >
+                        <button key={slot} onClick={() => setSlotSeleccionado(slot)}
+                          className={`py-2 rounded-lg text-sm font-medium transition-colors ${slotSeleccionado === slot ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                           {slot}
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
-
                 {slotSeleccionado && (
-                  <button
-                    onClick={handleAgendar}
-                    disabled={agendando}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
-                  >
+                  <button onClick={handleAgendar} disabled={agendando}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-50">
                     {agendando ? 'Agendando...' : `Confirmar ${fechaSeleccionada} a las ${slotSeleccionado}`}
                   </button>
                 )}
-
-                <button
-                  onClick={() => { setMostrarAgenda(false); setFechaSeleccionada(''); setSlotSeleccionado('') }}
-                  className="text-gray-500 text-sm hover:text-gray-300 transition-colors"
-                >
+                <button onClick={() => { setMostrarAgenda(false); setFechaSeleccionada(''); setSlotSeleccionado('') }}
+                  className="text-gray-500 text-sm hover:text-gray-300 transition-colors">
                   Cancelar
                 </button>
               </div>
             )}
           </div>
         )}
-
       </div>
     </div>
+  )
+}
+
+export default function SeguimientoPage() {
+  return (
+    <Suspense>
+      <SeguimientoContent />
+    </Suspense>
   )
 }
