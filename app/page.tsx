@@ -620,8 +620,8 @@ export default function Home() {
           <div>
             <h4 className="text-sm font-bold tracking-widest mb-4" style={{ color: dorado }}>CONTACTO</h4>
             <ul className="space-y-2 text-sm" style={{ color: '#C7B88A99' }}>
-              <li>contacto@toropacheco.cl</li>
-              <li>+56 9 1234 5678</li>
+              <li>contacto@toropachecoasociados.cl</li>
+              <li>+56 9 50944482</li>
               <li>Santiago, Chile</li>
             </ul>
           </div>
