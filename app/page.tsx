@@ -114,7 +114,7 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50" style={{ backgroundColor: azulProfundo }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex justify-between items-center py-4">
           <div>
-            <img src="/logo_claro.png" alt="Toro Pacheco & Asociados" className="h-16 w-auto" />
+            <img src="/logo_claro.png" alt="Toro Pacheco & Asociados" className="h-10 sm:h-16 w-auto" />
           </div>
           <div className="hidden md:flex gap-8 text-base font-medium">
             <a href="#servicios" className="text-white transition-colors hover:text-[#C7B88A]">Servicios</a>
@@ -129,7 +129,7 @@ export default function Home() {
             </a>
           <button
             onClick={() => { setTab('video'); document.getElementById('consulta')?.scrollIntoView({ behavior: 'smooth' }) }}
-            className="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-full transition-all hover:opacity-90"
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-bold px-3 sm:px-5 py-2 sm:py-2.5 rounded-full transition-all hover:opacity-90"
             style={{ backgroundColor: dorado, color: azulProfundo, boxShadow: '0 4px 14px 0 rgba(199,184,138,0.3)' }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={azulProfundo} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
