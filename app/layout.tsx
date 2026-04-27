@@ -15,8 +15,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Toro Pacheco & Asociados — Estudio Jurídico",
-  description: "Estudio jurídico con más de 25 años de experiencia. Justicia, tradición y confianza.",
+  title: "Toro Pacheco & Asociados",
+  description: "Soluciones legales con rigor, confianza y compromiso con la justicia.",
 };
 
 export default function RootLayout({
