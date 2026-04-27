@@ -12,6 +12,7 @@ import {
   obtenerSlotsDisponibles,
   obtenerFechasBloqueadas,
   toggleFechaBloqueada,
+  confirmarCita,
   editarCita,
   cancelarCita,
   DIAS,
@@ -84,6 +85,7 @@ export default function DashboardPage() {
       const { session } = await obtenerSesion()
       if (!session) { router.push('/login'); return }
       const { abogado: datosAbogado } = await obtenerDatosAbogado()
+      if (!datosAbogado || datosAbogado.estado === false) { router.push('/login'); return }
       setAbogado(datosAbogado)
       if (datosAbogado) {
         const [consultasRes, citasRes, disponRes] = await Promise.all([
@@ -251,6 +253,18 @@ export default function DashboardPage() {
       mostrarMensaje('error', result.error || 'Error al editar.')
     }
     setGuardandoCita(false)
+  }
+
+  // --- CITAS: CONFIRMAR ---
+  async function handleConfirmarCita(cita: Cita) {
+    const result = await confirmarCita(cita.id)
+    if (result.success) {
+      mostrarMensaje('exito', `Cita confirmada. Se envió correo a ${cita.email_cliente}.`)
+      const { citas: nuevasCitas } = await obtenerMisCitas(abogado.id)
+      if (nuevasCitas) setCitas(nuevasCitas)
+    } else {
+      mostrarMensaje('error', result.error || 'Error al confirmar.')
+    }
   }
 
   // --- CITAS: CANCELAR ---
@@ -480,74 +494,98 @@ export default function DashboardPage() {
 
   const inputCls = 'w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
 
+  const azul = '#1F3A5F'
+  const dorado = '#C7B88A'
+  const azulProfundo = '#162B46'
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: '#F5F7FA', fontFamily: 'var(--font-inter), sans-serif' }}>
+
       {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
-          <div className="flex-shrink-0">
-            <h1 className="text-sm sm:text-lg font-bold text-gray-900 leading-tight">Toropacheco</h1>
-            <p className="text-xs text-gray-500 hidden sm:block">Panel del abogado</p>
-          </div>
-          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
-            {(['consultas', 'citas', 'clientes', 'horarios'] as Vista[]).map(v => (
-              <button key={v} onClick={() => setVista(v)}
-                className={`px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-colors whitespace-nowrap flex-shrink-0 ${vista === v ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-                {v.charAt(0).toUpperCase() + v.slice(1)}
+      <nav className="border-b" style={{ backgroundColor: azulProfundo, borderColor: '#243B55' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="h-14 sm:h-16 flex items-center justify-between gap-4">
+            <div className="flex-shrink-0">
+              <img src="/logo_claro.png" alt="Toro Pacheco & Asociados" className="h-9 sm:h-12 w-auto" />
+            </div>
+            <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
+              {(['consultas', 'citas', 'clientes', 'horarios'] as Vista[]).map(v => (
+                <button key={v} onClick={() => setVista(v)}
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all whitespace-nowrap flex-shrink-0"
+                  style={vista === v
+                    ? { backgroundColor: dorado, color: azulProfundo }
+                    : { color: 'rgba(255,255,255,0.65)' }}>
+                  {v.charAt(0).toUpperCase() + v.slice(1)}
+                </button>
+              ))}
+              {abogado?.is_admin && (
+                <a href="/admin"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap flex-shrink-0 transition-all"
+                  style={{ color: 'rgba(255,255,255,0.65)' }}>
+                  Admin
+                </a>
+              )}
+              <button onClick={async () => { await cerrarSesion(); router.push('/login') }}
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border whitespace-nowrap flex-shrink-0 transition-all"
+                style={{ borderColor: dorado + '55', color: dorado }}>
+                Salir
               </button>
-            ))}
-            {abogado?.is_admin && (
-              <a href="/admin" className="px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-gray-900 hover:bg-gray-700 rounded-md transition-colors whitespace-nowrap flex-shrink-0">
-                Admin
-              </a>
-            )}
-            <button onClick={async () => { await cerrarSesion(); router.push('/login') }}
-              className="px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors whitespace-nowrap flex-shrink-0">
-              Salir
-            </button>
+            </div>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
 
         {mensaje && (
-          <div className={`mb-6 p-4 rounded-lg text-sm font-medium ${mensaje.tipo === 'exito' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+          <div className={`mb-6 p-4 rounded-xl text-sm font-medium border ${mensaje.tipo === 'exito' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
             {mensaje.texto}
           </div>
         )}
 
         {/* Bienvenida */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Bienvenida, {abogado?.nombre_negocio}</h2>
-          <p className="text-gray-500 mt-1">{abogado?.email}</p>
+        <div className="rounded-2xl p-5 sm:p-6 mb-6 text-white" style={{ backgroundColor: azulProfundo }}>
+          <p className="text-xs font-bold tracking-widest mb-1" style={{ color: dorado }}>PANEL DEL ABOGADO</p>
+          <h2 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: 'var(--font-playfair), serif' }}>
+            Bienvenido, {abogado?.nombres?.split(' ')[0] ?? abogado?.nombre?.split(' ')[0] ?? abogado?.nombre_negocio?.split(' ')[0]}
+          </h2>
+          <p className="text-sm mt-1 opacity-60">{abogado?.email}</p>
         </div>
 
         {/* VISTA: CONSULTAS */}
         {vista === 'consultas' && (<>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-blue-600 rounded-xl p-6 text-white">
-              <p className="text-sm font-medium opacity-80">Consultas Nuevas</p>
-              <p className="text-4xl font-bold mt-1">{consultasNuevas.length}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="rounded-xl p-6 text-white" style={{ backgroundColor: azul }}>
+              <p className="text-xs font-bold tracking-widest opacity-70 mb-1">NUEVAS</p>
+              <p className="text-4xl font-bold">{consultasNuevas.length}</p>
+              <p className="text-sm opacity-60 mt-1">Consultas por revisar</p>
             </div>
-            <div className="bg-green-600 rounded-xl p-6 text-white">
-              <p className="text-sm font-medium opacity-80">Respondidas</p>
-              <p className="text-4xl font-bold mt-1">{consultasRespondidas.length}</p>
+            <div className="rounded-xl p-6" style={{ backgroundColor: dorado }}>
+              <p className="text-xs font-bold tracking-widest mb-1" style={{ color: azulProfundo, opacity: 0.7 }}>RESPONDIDAS</p>
+              <p className="text-4xl font-bold" style={{ color: azulProfundo }}>{consultasRespondidas.length}</p>
+              <p className="text-sm mt-1" style={{ color: azulProfundo, opacity: 0.6 }}>Atendidas</p>
             </div>
-            <div className="bg-gray-700 rounded-xl p-6 text-white">
-              <p className="text-sm font-medium opacity-80">Total</p>
-              <p className="text-4xl font-bold mt-1">{consultas.length}</p>
+            <div className="rounded-xl p-6 text-white border" style={{ backgroundColor: azulProfundo, borderColor: '#243B55' }}>
+              <p className="text-xs font-bold tracking-widest opacity-70 mb-1">TOTAL</p>
+              <p className="text-4xl font-bold">{consultas.length}</p>
+              <p className="text-sm opacity-60 mt-1">Consultas recibidas</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Consultas Recibidas</h3>
+          <div className="bg-white rounded-2xl shadow-sm border p-6" style={{ borderColor: '#EDE8DC' }}>
+            <h3 className="text-xl font-bold mb-1" style={{ fontFamily: 'var(--font-playfair), serif', color: azul }}>Consultas Recibidas</h3>
+            <div className="w-10 h-0.5 mb-6" style={{ backgroundColor: dorado }} />
             {consultas.length === 0 ? (
               <p className="text-gray-500 text-center py-12">No hay consultas todavía.</p>
             ) : (
               <div className="space-y-4">
                 {consultas.map(consulta => (
-                  <div key={consulta.id} className={`border rounded-xl p-5 transition-all ${consulta.estado === 'nueva' ? 'border-blue-200 bg-blue-50' : consulta.estado === 'respondida' ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+                  <div key={consulta.id} className="border rounded-xl p-5 transition-all"
+                    style={consulta.estado === 'nueva'
+                      ? { borderColor: '#C7B88A55', backgroundColor: '#FDFBF5' }
+                      : consulta.estado === 'respondida'
+                        ? { borderColor: '#D1FAE5', backgroundColor: '#F0FDF4' }
+                        : { borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
                     <div className="flex flex-wrap justify-between items-start gap-2 mb-3">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-semibold text-gray-900 text-lg">{consulta.asunto}</h4>
@@ -556,7 +594,12 @@ export default function DashboardPage() {
                           {consulta.telefono_cliente && ` · ${consulta.telefono_cliente}`}
                         </p>
                       </div>
-                      <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${consulta.estado === 'nueva' ? 'bg-blue-100 text-blue-800' : consulta.estado === 'respondida' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'}`}>
+                      <span className="shrink-0 px-3 py-1 rounded-full text-xs font-bold"
+                        style={consulta.estado === 'nueva'
+                          ? { backgroundColor: '#C7B88A22', color: '#8B6914' }
+                          : consulta.estado === 'respondida'
+                            ? { backgroundColor: '#D1FAE5', color: '#065F46' }
+                            : { backgroundColor: '#FEE2E2', color: '#991B1B' }}>
                         {consulta.estado.toUpperCase()}
                       </span>
                     </div>
@@ -637,20 +680,24 @@ export default function DashboardPage() {
                 {citasFiltradas.map(cita => {
                   const fecha = new Date(cita.fecha_hora)
                   const pasada = fecha < ahora
+                  const esPendiente = cita.estado === 'pendiente'
+                  const fechaStr = fecha.toLocaleString('es-CL', {
+                    weekday: 'long', day: 'numeric', month: 'long',
+                    hour: '2-digit', minute: '2-digit',
+                    timeZone: 'America/Santiago',
+                  })
                   return (
-                    <div key={cita.id} className={`bg-white rounded-xl border p-5 shadow-sm ${cita.estado === 'cancelada' ? 'border-red-100 opacity-60' : pasada ? 'border-gray-200' : 'border-blue-200'}`}>
+                    <div key={cita.id} className={`bg-white rounded-xl border p-5 shadow-sm ${cita.estado === 'cancelada' ? 'border-red-100 opacity-60' : esPendiente ? 'border-yellow-300' : pasada ? 'border-gray-200' : 'border-blue-200'}`}>
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <h4 className="font-semibold text-gray-900">{cita.nombre_cliente}</h4>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cita.estado === 'confirmada' ? 'bg-green-100 text-green-700' : cita.estado === 'cancelada' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cita.estado === 'confirmada' ? 'bg-green-100 text-green-700' : cita.estado === 'cancelada' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
                               {cita.estado}
                             </span>
                           </div>
                           <p className="text-sm text-gray-500">{cita.email_cliente}</p>
-                          <p className="text-sm font-medium text-gray-700 mt-2">
-                            📅 {fecha.toLocaleString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                          <p className="text-sm font-medium text-gray-700 mt-2">📅 {fechaStr}</p>
                           {cita.notas && <p className="text-sm text-gray-500 mt-1">📝 {cita.notas}</p>}
                         </div>
                         <div className="flex flex-col gap-2 ml-4">
@@ -659,6 +706,12 @@ export default function DashboardPage() {
                               className="text-xs px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors text-center">
                               Ingresar →
                             </a>
+                          )}
+                          {esPendiente && (
+                            <button onClick={() => handleConfirmarCita(cita)}
+                              className="text-xs px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg font-medium transition-colors">
+                              Confirmar
+                            </button>
                           )}
                           {cita.estado !== 'cancelada' && (
                             <>
@@ -1025,7 +1078,7 @@ export default function DashboardPage() {
             <h2 className="text-lg font-bold text-gray-900 mb-2">¿Cancelar videollamada?</h2>
             <p className="text-sm text-gray-500 mb-1">{confirmarCancelar.nombre_cliente}</p>
             <p className="text-sm font-medium text-gray-700 mb-6">
-              {new Date(confirmarCancelar.fecha_hora).toLocaleString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+              {new Date(confirmarCancelar.fecha_hora).toLocaleString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago' })}
             </p>
             <div className="flex gap-3">
               <button onClick={handleCancelarCita} disabled={cancelando}

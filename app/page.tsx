@@ -75,7 +75,7 @@ export default function Home() {
         abogadoId: ABOGADO_ID,
         nombreCliente: video.nombre,
         emailCliente: video.email,
-        fechaHora: `${fechaVideo}T${slotSeleccionado}:00`,
+        fechaHora: new Date(`${fechaVideo}T${slotSeleccionado}:00`).toISOString(),
       }),
     })
     const resultado = await res.json()
@@ -127,8 +127,10 @@ export default function Home() {
               style={{ borderColor: dorado + '66', color: dorado }}>
               Crear cuenta
             </a>
-          <button
-            onClick={() => { setTab('video'); document.getElementById('consulta')?.scrollIntoView({ behavior: 'smooth' }) }}
+          <a
+            href="https://wa.me/56950944482"
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-1.5 text-xs sm:text-sm font-bold px-3 sm:px-5 py-2 sm:py-2.5 rounded-full transition-all hover:opacity-90"
             style={{ backgroundColor: dorado, color: azulProfundo, boxShadow: '0 4px 14px 0 rgba(199,184,138,0.3)' }}
           >
@@ -136,7 +138,7 @@ export default function Home() {
               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6.29 6.29l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
             </svg>
             Contáctanos
-          </button>
+          </a>
           </div>
         </div>
       </nav>
@@ -149,12 +151,28 @@ export default function Home() {
 
             <div className="lg:col-span-4 flex flex-col justify-center pb-8 lg:pb-24 pt-4 lg:pt-0 relative z-10">
 
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight lg:leading-[0.9] mb-6 backdrop-blur-sm rounded-2xl px-4 py-3 -mx-4"
-    style={{ fontFamily: 'var(--font-playfair), serif', letterSpacing: '-0.02em', backgroundColor: 'rgba(253,251,245,0.55)' }}>
-                <span style={{ color: azul }}>Protegemos</span><br />
-                <span style={{ color: azul }}>lo que más</span><br />
-                <span style={{ color: dorado }}>te importa</span>
-              </h1>
+              {/* Título + imagen lado a lado en móvil/tablet */}
+              <div className="flex items-end gap-3 lg:block mb-6">
+                <h1 className="flex-1 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight lg:leading-[0.9] lg:mb-6 backdrop-blur-sm rounded-2xl px-4 py-3 -mx-4"
+                  style={{ fontFamily: 'var(--font-playfair), serif', letterSpacing: '-0.02em', backgroundColor: 'rgba(253,251,245,0.55)' }}>
+                  <span style={{ color: azul }}>Protegemos</span><br />
+                  <span style={{ color: azul }}>lo que más</span><br />
+                  <span style={{ color: dorado }}>te importa</span>
+                </h1>
+                {/* Imagen solo en móvil/tablet, junto al título */}
+                <div className="flex-shrink-0 lg:hidden self-end">
+                  <img
+                    src="/justicia2.png"
+                    alt="Toro Pacheco & Asociados"
+                    className="h-40 sm:h-52 md:h-64 w-auto object-contain object-bottom"
+                    style={{
+                      maskImage: 'linear-gradient(to top, transparent 0%, black 18%)',
+                      WebkitMaskImage: 'linear-gradient(to top, transparent 0%, black 18%)'
+                    }}
+                  />
+                </div>
+              </div>
+
               <p className="text-base leading-relaxed mb-8" style={{ color: '#5A6474' }}>
                 En Toro Pacheco, transformamos situaciones legales complejas en soluciones claras. Defendiendo tus derechos en Chile.
               </p>
@@ -217,16 +235,16 @@ export default function Home() {
                 <div className="hidden lg:flex lg:col-span-3 flex-col justify-end pb-16 space-y-3 relative z-10">
               <p className="text-xs font-bold tracking-widest mb-2" style={{ color: dorado }}>ÁREAS DE PRÁCTICA</p>
               {[
-                { icon: '⚖️', titulo: 'Derecho Laboral', desc: 'Despidos, finiquitos y acoso laboral.' },
-                { icon: '🏛️', titulo: 'Derecho Civil', desc: 'Contratos, herencias y arrendamientos.' },
-                { icon: '👨‍👩‍👧', titulo: 'Derecho de Familia', desc: 'Divorcios, tuición y alimentos.' },
-                { icon: '🏢', titulo: 'Derecho Comercial', desc: 'Empresas y contratos comerciales.' },
-                { icon: '💰', titulo: 'Deudas y Cobranzas', desc: 'Defensa ante juicios y embargos.' },
+                { icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M12 3V21" stroke="#C7B88A" strokeWidth="1.5" strokeLinecap="round"/><path d="M6 6H18" stroke="#C7B88A" strokeWidth="1.5" strokeLinecap="round"/><path d="M7 6L4 13H10L7 6Z" stroke="#C7B88A" strokeWidth="1.5" strokeLinejoin="round"/><path d="M17 6L14 13H20L17 6Z" stroke="#C7B88A" strokeWidth="1.5" strokeLinejoin="round"/><path d="M9 21H15" stroke="#C7B88A" strokeWidth="1.5" strokeLinecap="round"/></svg>, titulo: 'Derecho Laboral', desc: 'Despidos, finiquitos y acoso laboral.' },
+                { icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M4 9L12 4L20 9H4Z" stroke="#C7B88A" strokeWidth="1.5" strokeLinejoin="round"/><path d="M6 10V18" stroke="#C7B88A" strokeWidth="1.5"/><path d="M10 10V18" stroke="#C7B88A" strokeWidth="1.5"/><path d="M14 10V18" stroke="#C7B88A" strokeWidth="1.5"/><path d="M18 10V18" stroke="#C7B88A" strokeWidth="1.5"/><path d="M4 20H20" stroke="#C7B88A" strokeWidth="1.5" strokeLinecap="round"/></svg>, titulo: 'Derecho Civil', desc: 'Contratos, herencias y arrendamientos.' },
+                { icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="8" cy="8" r="2.5" stroke="#C7B88A" strokeWidth="1.5"/><circle cx="16" cy="8" r="2.5" stroke="#C7B88A" strokeWidth="1.5"/><circle cx="12" cy="14" r="2" stroke="#C7B88A" strokeWidth="1.5"/><path d="M4 20C4.5 16.8 6 14.5 8 14.5" stroke="#C7B88A" strokeWidth="1.5" strokeLinecap="round"/><path d="M20 20C19.5 16.8 18 14.5 16 14.5" stroke="#C7B88A" strokeWidth="1.5" strokeLinecap="round"/><path d="M9 20C9.3 17.8 10.4 16.5 12 16.5C13.6 16.5 14.7 17.8 15 20" stroke="#C7B88A" strokeWidth="1.5" strokeLinecap="round"/></svg>, titulo: 'Derecho de Familia', desc: 'Divorcios, tuición y alimentos.' },
+                { icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="13" rx="1.5" stroke="#C7B88A" strokeWidth="1.5"/><path d="M7 7V5C7 3.9 7.9 3 9 3H15C16.1 3 17 3.9 17 5V7" stroke="#C7B88A" strokeWidth="1.5" strokeLinejoin="round"/><path d="M3 12H21" stroke="#C7B88A" strokeWidth="1.5"/><path d="M10 12V16" stroke="#C7B88A" strokeWidth="1.5"/><path d="M14 12V16" stroke="#C7B88A" strokeWidth="1.5"/></svg>, titulo: 'Derecho Comercial', desc: 'Empresas y contratos comerciales.' },
+                { icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="#C7B88A" strokeWidth="1.5"/><path d="M12 8V12L14.5 14.5" stroke="#C7B88A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 6.5C9 6.5 10 4 12 4C14 4 15 6.5 15 6.5" stroke="#C7B88A" strokeWidth="1.5" strokeLinecap="round"/></svg>, titulo: 'Deudas y Cobranzas', desc: 'Defensa ante juicios y embargos.' },
               ].map((s, i) => (
                 <div key={s.titulo}
                   className="flex items-start gap-4 p-5 rounded-xl border transition-all hover:shadow-sm cursor-pointer group"
                   style={{ borderColor: i === 0 ? azul : '#EDE8DC', backgroundColor: i === 0 ? azul : 'white' }}>
-                  <span className="text-2xl flex-shrink-0">{s.icon}</span>
+                  <span className="flex-shrink-0">{s.icon}</span>
                   <div>
                     <p className="text-base font-bold leading-tight" style={{ color: i === 0 ? '#FFFFFF' : azul }}>
                       {s.titulo}
@@ -604,7 +622,7 @@ export default function Home() {
               <p className="text-sm font-normal" style={{ color: dorado }}>&amp; ASOCIADOS</p>
             </div>
             <p className="text-sm leading-relaxed" style={{ color: '#C7B88A99' }}>
-              Estudio jurídico con más de 25 años de experiencia entregando soluciones legales en Chile.
+              Defendemos tus derechos con dedicación y compromiso. Soluciones legales claras para cada situación en Chile.
             </p>
           </div>
           <div>
@@ -621,7 +639,12 @@ export default function Home() {
             <h4 className="text-sm font-bold tracking-widest mb-4" style={{ color: dorado }}>CONTACTO</h4>
             <ul className="space-y-2 text-sm" style={{ color: '#C7B88A99' }}>
               <li>contacto@toropachecoasociados.cl</li>
-              <li>+56 9 50944482</li>
+              <li>
+                <a href="https://wa.me/56950944482" target="_blank" rel="noopener noreferrer"
+                  className="hover:opacity-80 transition-opacity">
+                  +56 9 50944482
+                </a>
+              </li>
               <li>Santiago, Chile</li>
             </ul>
           </div>
@@ -630,6 +653,32 @@ export default function Home() {
           <p className="text-xs" style={{ color: '#C7B88A66' }}>
             © 2026 Toro Pacheco &amp; Asociados. Todos los derechos reservados.
           </p>
+          <div className="flex items-center gap-3">
+            {/* LinkedIn */}
+            <a href="https://www.linkedin.com/in/branco-toro/" target="_blank" rel="noopener noreferrer" className="hover:opacity-75 transition-opacity">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="32" height="32" rx="6" fill="#1F3A5F"/>
+                <path d="M10.667 13.333H13.333V21.333H10.667V13.333ZM12 12C11.264 12 10.667 11.403 10.667 10.667C10.667 9.931 11.264 9.333 12 9.333C12.736 9.333 13.333 9.931 13.333 10.667C13.333 11.403 12.736 12 12 12ZM21.333 21.333H18.667V17.333C18.667 16.229 17.771 15.333 16.667 15.333C15.563 15.333 14.667 16.229 14.667 17.333V21.333H12V13.333H14.667V14.485C15.227 13.768 16.101 13.333 17.067 13.333C19.387 13.333 21.333 15.28 21.333 17.6V21.333Z" fill="#C7B88A"/>
+              </svg>
+            </a>
+            {/* Instagram */}
+            <a href="https://www.instagram.com/toropachecoasociados/" target="_blank" rel="noopener noreferrer" className="hover:opacity-75 transition-opacity">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="32" height="32" rx="6" fill="#1F3A5F"/>
+                <rect x="9" y="9" width="14" height="14" rx="4" stroke="#C7B88A" strokeWidth="1.5"/>
+                <circle cx="16" cy="16" r="3.5" stroke="#C7B88A" strokeWidth="1.5"/>
+                <circle cx="20" cy="12" r="1" fill="#C7B88A"/>
+              </svg>
+            </a>
+            {/* YouTube */}
+            <a href="https://www.youtube.com/@estudiandoderechobranco" target="_blank" rel="noopener noreferrer" className="hover:opacity-75 transition-opacity">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="32" height="32" rx="6" fill="#1F3A5F"/>
+                <rect x="8" y="11" width="16" height="10" rx="3" stroke="#C7B88A" strokeWidth="1.5"/>
+                <path d="M14 13.5L19 16L14 18.5V13.5Z" fill="#C7B88A"/>
+              </svg>
+            </a>
+          </div>
           <p className="text-xs font-semibold tracking-widest" style={{ color: dorado }}>
             JUSTICIA · TRADICIÓN · CONFIANZA
           </p>

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         nombre_cliente: nombreCliente,
         email_cliente: emailCliente,
         fecha_hora: fechaHora,
-        estado: 'confirmada',
+        estado: 'pendiente',
         ...(meetingUrl ? { meeting_url: meetingUrl } : {}),
       })
       .select()
@@ -31,45 +31,55 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: citaError.message }, { status: 400 })
     }
 
-    // 2. Enviar email al cliente
+    // 2. Notificar al estudio (cliente recibirá correo cuando Branco confirme)
     const fechaFormateada = new Date(fechaHora).toLocaleString('es-CL', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
+      hour: '2-digit', minute: '2-digit',
+      timeZone: 'America/Santiago',
     })
 
-    await resend.emails.send({
-      from: 'Toropacheco y Asociados <onboarding@resend.dev>',
-      to: 'ka.cuestas@duocuc.cl', // TODO: cambiar a emailCliente cuando tengas dominio verificado
-      subject: `Cita confirmada — ${fechaFormateada}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1a1a2e;">Toropacheco y Asociados</h2>
-          <hr style="border: 1px solid #eee;" />
-          <p>Estimado/a <strong>${nombreCliente}</strong>,</p>
-          <p>Tu videoconsulta ha sido confirmada para el:</p>
-          <div style="background: #f0f4ff; padding: 16px; border-radius: 8px; margin: 16px 0; text-align: center;">
-            <p style="font-size: 18px; font-weight: bold; color: #1e40af; margin: 0;">${fechaFormateada}</p>
+    // Emails: no-fatal — la cita ya fue creada aunque fallen
+    Promise.all([
+      // Notificación al estudio
+      resend.emails.send({
+        from: 'Toro Pacheco & Asociados <no-reply@toropachecoasociados.cl>',
+        to: 'contacto@toropachecoasociados.cl',
+        subject: `Nueva solicitud de videoconsulta — ${nombreCliente}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1F3A5F;">Nueva solicitud de videoconsulta</h2>
+            <hr style="border: 1px solid #eee;" />
+            <p><strong>Cliente:</strong> ${nombreCliente}</p>
+            <p><strong>Email:</strong> ${emailCliente}</p>
+            <p><strong>Fecha solicitada:</strong> ${fechaFormateada}</p>
+            <p style="color: #555;">Ingresa al panel del abogado para <strong>confirmar o rechazar</strong> esta solicitud. El cliente recibirá un correo de confirmación una vez que la apruebes.</p>
+            <hr style="border: 1px solid #eee;" />
+            <p style="color: #888; font-size: 12px;">Notificación automática — Sistema Toro Pacheco</p>
           </div>
-          ${meetingUrl ? `
-          <p>Ingresa a tu reunión haciendo click aquí:</p>
-          <div style="text-align: center; margin: 24px 0;">
-            <a
-              href="${meetingUrl}"
-              style="background-color: #2563eb; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;"
-            >
-              Ingresar a la reunión
-            </a>
+        `,
+      }),
+      // Acuse de recibo al cliente
+      resend.emails.send({
+        from: 'Toro Pacheco & Asociados <no-reply@toropachecoasociados.cl>',
+        to: emailCliente,
+        subject: `Solicitud de videoconsulta recibida — ${fechaFormateada}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1F3A5F;">Toro Pacheco & Asociados</h2>
+            <hr style="border: 1px solid #eee;" />
+            <p>Estimado/a <strong>${nombreCliente}</strong>,</p>
+            <p>Hemos recibido tu solicitud de videoconsulta para el:</p>
+            <div style="background: #f5f0e8; padding: 16px; border-radius: 8px; margin: 16px 0; text-align: center;">
+              <p style="font-size: 18px; font-weight: bold; color: #1F3A5F; margin: 0;">${fechaFormateada}</p>
+            </div>
+            <p style="color: #555;">Tu solicitud está siendo revisada. Recibirás un segundo correo una vez que el abogado confirme la cita.</p>
+            <p style="color: #888; font-size: 12px;">Si tienes dudas puedes contactarnos a <a href="mailto:contacto@toropachecoasociados.cl">contacto@toropachecoasociados.cl</a> o al <a href="https://wa.me/56950944482">+56 9 50944482</a>.</p>
+            <hr style="border: 1px solid #eee;" />
+            <p style="color: #888; font-size: 12px;">Toro Pacheco & Asociados — contacto@toropachecoasociados.cl</p>
           </div>
-          <p style="color: #888; font-size: 13px;">O copia este enlace: ${meetingUrl}</p>
-          ` : `
-          <p style="color: #555;">El abogado te enviará el enlace de la reunión (Zoom o Google Meet) próximamente a este email.</p>
-          `}
-          <p style="color: #888; font-size: 12px;">La duración de la consulta es de 30 minutos.</p>
-          <hr style="border: 1px solid #eee;" />
-          <p style="color: #888; font-size: 12px;">Toropacheco y Asociados — Sistema Legal</p>
-        </div>
-      `
-    })
+        `,
+      }),
+    ]).catch((err) => console.error('[crear-cita] Error enviando emails:', err))
 
     return NextResponse.json({ success: true, cita })
 

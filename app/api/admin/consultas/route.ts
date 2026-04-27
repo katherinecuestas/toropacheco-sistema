@@ -6,6 +6,12 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+export async function GET() {
+  const { data, error } = await supabaseAdmin.from('consultas').select('*').order('created_at', { ascending: false })
+  if (error) return NextResponse.json({ consultas: null, error: error.message }, { status: 400 })
+  return NextResponse.json({ consultas: data })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { abogado_id, nombre_cliente, email_cliente, telefono_cliente, asunto, mensaje, estado } = await request.json()

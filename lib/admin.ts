@@ -5,6 +5,13 @@ export interface Abogado {
   created_at: string
   auth_user_id: string
   email: string
+  nombres?: string
+  apellido_paterno?: string
+  apellido_materno?: string
+  rut?: string
+  dv?: string
+  nombre_usuario?: string
+  nombre?: string
   nombre_negocio: string
   telefono?: string
   estado: boolean
@@ -25,13 +32,8 @@ export async function verificarAdmin(): Promise<boolean> {
 }
 
 export async function obtenerTodosAbogados() {
-  const { data, error } = await supabase
-    .from('abogados')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (error) return { abogados: null, error: error.message }
-  return { abogados: data as Abogado[], error: null }
+  const res = await fetch('/api/admin/abogados')
+  return res.json()
 }
 
 export async function toggleEstadoAbogado(id: number, estadoActual: boolean) {
@@ -47,7 +49,12 @@ export async function toggleEstadoAbogado(id: number, estadoActual: boolean) {
 export async function crearAbogado(datos: {
   email: string
   password: string
-  nombre_negocio: string
+  nombres: string
+  apellido_paterno: string
+  apellido_materno: string
+  rut?: string
+  dv?: string
+  nombre_usuario: string
   telefono?: string
   is_admin?: boolean
 }) {
@@ -63,7 +70,12 @@ export async function editarAbogado(datos: {
   id: number
   auth_user_id: string
   email: string
-  nombre_negocio: string
+  nombres: string
+  apellido_paterno: string
+  apellido_materno: string
+  rut?: string
+  dv?: string
+  nombre_usuario: string
   telefono?: string
   is_admin: boolean
   estado: boolean
@@ -72,6 +84,24 @@ export async function editarAbogado(datos: {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(datos),
+  })
+  return res.json()
+}
+
+export async function toggleEstadoAbogadoAdmin(id: number, auth_user_id: string, estado: boolean) {
+  const res = await fetch('/api/admin/abogados', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, auth_user_id, action: 'toggle-estado', estado }),
+  })
+  return res.json()
+}
+
+export async function cambiarPasswordAbogado(auth_user_id: string, password: string) {
+  const res = await fetch('/api/admin/abogados', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ auth_user_id, action: 'cambiar-password', password }),
   })
   return res.json()
 }
@@ -130,13 +160,8 @@ export async function eliminarConsulta(id: number) {
 }
 
 export async function obtenerTodasConsultas() {
-  const { data, error } = await supabase
-    .from('consultas')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  if (error) return { consultas: null, error: error.message }
-  return { consultas: data, error: null }
+  const res = await fetch('/api/admin/consultas')
+  return res.json()
 }
 
 // --- CLIENTES ---
@@ -271,25 +296,6 @@ export async function eliminarEvento(id: number) {
 }
 
 export async function obtenerEstadisticas() {
-  const [
-    { count: totalAbogados },
-    { count: abogadosActivos },
-    { count: totalConsultas },
-    { count: consultasNuevas },
-    { count: consultasRespondidas },
-  ] = await Promise.all([
-    supabase.from('abogados').select('*', { count: 'exact', head: true }),
-    supabase.from('abogados').select('*', { count: 'exact', head: true }).eq('estado', true),
-    supabase.from('consultas').select('*', { count: 'exact', head: true }),
-    supabase.from('consultas').select('*', { count: 'exact', head: true }).eq('estado', 'nueva'),
-    supabase.from('consultas').select('*', { count: 'exact', head: true }).eq('estado', 'respondida'),
-  ])
-
-  return {
-    totalAbogados: totalAbogados ?? 0,
-    abogadosActivos: abogadosActivos ?? 0,
-    totalConsultas: totalConsultas ?? 0,
-    consultasNuevas: consultasNuevas ?? 0,
-    consultasRespondidas: consultasRespondidas ?? 0,
-  }
+  const res = await fetch('/api/admin/stats')
+  return res.json()
 }

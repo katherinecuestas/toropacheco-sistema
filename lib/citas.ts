@@ -60,74 +60,13 @@ export async function guardarDisponibilidad(
 }
 
 export async function obtenerSlotsDisponibles(abogadoId: number, fechaISO: string) {
-  const { data: bloqueada } = await supabase
-    .from('fechas_bloqueadas')
-    .select('id')
-    .eq('abogado_id', abogadoId)
-    .eq('fecha', fechaISO)
-    .maybeSingle()
-
-  if (bloqueada) return { slots: [] }
-
-  const [y, m, d] = fechaISO.split('-').map(Number)
-  const fecha = new Date(y, m - 1, d)
-  const diaSemana = fecha.getDay() === 0 ? 7 : fecha.getDay()
-
-  const { data: horario } = await supabase
-    .from('disponibilidad')
-    .select('*')
-    .eq('abogado_id', abogadoId)
-    .eq('dia_semana', diaSemana)
-    .eq('activo', true)
-    .single()
-
-  if (!horario) return { slots: [] }
-
-  // Generar slots de 30 minutos
-  const slots: string[] = []
-  const [hInicio, mInicio] = horario.hora_inicio.split(':').map(Number)
-  const [hFin, mFin] = horario.hora_fin.split(':').map(Number)
-  let minutos = hInicio * 60 + mInicio
-  const minutesFin = hFin * 60 + mFin
-
-  while (minutos + 30 <= minutesFin) {
-    const h = String(Math.floor(minutos / 60)).padStart(2, '0')
-    const m = String(minutos % 60).padStart(2, '0')
-    slots.push(`${h}:${m}`)
-    minutos += 30
-  }
-
-  // Filtrar slots ya ocupados
-  const fechaInicio = `${fechaISO}T00:00:00`
-  const fechaFin = `${fechaISO}T23:59:59`
-
-  const { data: citasOcupadas } = await supabase
-    .from('citas')
-    .select('fecha_hora')
-    .eq('abogado_id', abogadoId)
-    .gte('fecha_hora', fechaInicio)
-    .lte('fecha_hora', fechaFin)
-    .neq('estado', 'cancelada')
-
-  const horasOcupadas = new Set(
-    (citasOcupadas || []).map(c => {
-      const d = new Date(c.fecha_hora)
-      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-    })
-  )
-
-  return { slots: slots.filter(s => !horasOcupadas.has(s)) }
+  const res = await fetch(`/api/slots?abogado_id=${abogadoId}&fecha=${fechaISO}`)
+  return res.json()
 }
 
 export async function obtenerMisCitas(abogadoId: number) {
-  const { data, error } = await supabase
-    .from('citas')
-    .select('*')
-    .eq('abogado_id', abogadoId)
-    .order('fecha_hora', { ascending: true })
-
-  if (error) return { citas: null, error: error.message }
-  return { citas: data as Cita[], error: null }
+  const res = await fetch(`/api/citas?abogado_id=${abogadoId}`)
+  return res.json()
 }
 
 export async function obtenerFechasBloqueadas(abogadoId: number) {
@@ -149,6 +88,15 @@ export async function toggleFechaBloqueada(abogadoId: number, fecha: string, blo
     if (error) return { success: false, error: error.message }
   }
   return { success: true }
+}
+
+export async function confirmarCita(id: number) {
+  const res = await fetch('/api/citas', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, action: 'confirmar' }),
+  })
+  return res.json()
 }
 
 export async function editarCita(id: number, datos: { fecha_hora: string; notas?: string; estado: string; meeting_url?: string }) {
