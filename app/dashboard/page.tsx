@@ -141,14 +141,6 @@ export default function DashboardPage() {
     setEnviando(true)
     const { success, error } = await responderConsulta(consultaId, textoRespuesta, abogado.id)
     if (!success) { mostrarMensaje('error', error || 'Error al guardar respuesta.'); setEnviando(false); return }
-    const consultaRespondida = consultas.find(c => c.id === consultaId)
-    if (consultaRespondida) {
-      await fetch('/api/enviar-respuesta', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emailCliente: consultaRespondida.email_cliente, nombreCliente: consultaRespondida.nombre_cliente, asunto: consultaRespondida.asunto, respuesta: textoRespuesta })
-      })
-    }
     mostrarMensaje('exito', 'Respuesta enviada.')
     setConsultaActiva(null)
     setTextoRespuesta('')

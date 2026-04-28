@@ -54,7 +54,7 @@ export async function enviarConsulta(
     await fetch('/api/confirmar-consulta', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emailCliente, nombreCliente, asunto, token })
+      body: JSON.stringify({ emailCliente, nombreCliente, asunto, mensaje, telefonoCliente, token })
     })
 
     return { success: true }
@@ -115,23 +115,12 @@ export async function responderConsulta(
   abogadoId: number
 ) {
   try {
-    const { data, error } = await supabase
-      .from('consultas')
-      .update({
-        estado: 'respondida',
-        respuesta: respuesta,
-        respondida_en: new Date().toISOString(),
-        respondida_por: abogadoId
-      })
-      .eq('id', consultaId)
-      .select()
-      .single()
-
-    if (error) {
-      return { success: false, error: error.message }
-    }
-
-    return { success: true, consulta: data }
+    const res = await fetch('/api/responder-consulta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ consultaId, respuesta, abogadoId }),
+    })
+    return res.json()
   } catch (error) {
     return {
       success: false,
