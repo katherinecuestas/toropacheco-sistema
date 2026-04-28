@@ -493,41 +493,67 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F5F7FA', fontFamily: 'var(--font-inter), sans-serif' }}>
 
-      {/* Navbar */}
+      {/* Navbar desktop */}
       <nav className="border-b" style={{ backgroundColor: azulProfundo, borderColor: '#243B55' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="h-14 sm:h-16 flex items-center justify-between gap-4">
             <div className="flex-shrink-0">
               <img src="/logo_claro.png" alt="Toro Pacheco & Asociados" className="h-9 sm:h-12 w-auto" />
             </div>
-            <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
+            {/* Tabs — solo visibles en sm+ */}
+            <div className="hidden sm:flex items-center gap-1 sm:gap-2">
               {(['consultas', 'citas', 'clientes', 'horarios'] as Vista[]).map(v => (
                 <button key={v} onClick={() => setVista(v)}
-                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all whitespace-nowrap flex-shrink-0"
-                  style={vista === v
-                    ? { backgroundColor: dorado, color: azulProfundo }
-                    : { color: 'rgba(255,255,255,0.65)' }}>
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all whitespace-nowrap"
+                  style={vista === v ? { backgroundColor: dorado, color: azulProfundo } : { color: 'rgba(255,255,255,0.65)' }}>
                   {v.charAt(0).toUpperCase() + v.slice(1)}
                 </button>
               ))}
               {abogado?.is_admin && (
-                <a href="/admin"
-                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap flex-shrink-0 transition-all"
-                  style={{ color: 'rgba(255,255,255,0.65)' }}>
-                  Admin
-                </a>
+                <a href="/admin" className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-all"
+                  style={{ color: 'rgba(255,255,255,0.65)' }}>Admin</a>
               )}
               <button onClick={async () => { await cerrarSesion(); router.push('/login') }}
-                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border whitespace-nowrap flex-shrink-0 transition-all"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border whitespace-nowrap transition-all"
                 style={{ borderColor: dorado + '55', color: dorado }}>
                 Salir
               </button>
             </div>
+            {/* Botón salir en móvil */}
+            <button onClick={async () => { await cerrarSesion(); router.push('/login') }}
+              className="sm:hidden px-3 py-1.5 text-xs font-medium rounded-lg border"
+              style={{ borderColor: dorado + '55', color: dorado }}>
+              Salir
+            </button>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+      {/* Bottom nav — solo móvil */}
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 border-t flex" style={{ backgroundColor: azulProfundo, borderColor: '#243B55' }}>
+        {([
+          { v: 'consultas', label: 'Consultas', icon: '💬' },
+          { v: 'citas', label: 'Citas', icon: '📅' },
+          { v: 'clientes', label: 'Clientes', icon: '👤' },
+          { v: 'horarios', label: 'Horarios', icon: '🕐' },
+        ] as { v: Vista; label: string; icon: string }[]).map(({ v, label, icon }) => (
+          <button key={v} onClick={() => setVista(v)}
+            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-all"
+            style={vista === v ? { color: dorado } : { color: 'rgba(255,255,255,0.5)' }}>
+            <span className="text-lg leading-none">{icon}</span>
+            <span className="text-[10px] font-semibold">{label}</span>
+          </button>
+        ))}
+        {abogado?.is_admin && (
+          <a href="/admin" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5"
+            style={{ color: 'rgba(255,255,255,0.5)' }}>
+            <span className="text-lg leading-none">⚙️</span>
+            <span className="text-[10px] font-semibold">Admin</span>
+          </a>
+        )}
+      </nav>
+
+      <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8 pb-24 sm:pb-8">
 
         {mensaje && (
           <div className={`mb-6 p-4 rounded-xl text-sm font-medium border ${mensaje.tipo === 'exito' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
@@ -679,45 +705,46 @@ export default function DashboardPage() {
                     timeZone: 'America/Santiago',
                   })
                   return (
-                    <div key={cita.id} className={`bg-white rounded-xl border p-5 shadow-sm ${cita.estado === 'cancelada' ? 'border-red-100 opacity-60' : esPendiente ? 'border-yellow-300' : pasada ? 'border-gray-200' : 'border-blue-200'}`}>
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                    <div key={cita.id} className={`bg-white rounded-xl border p-4 sm:p-5 shadow-sm ${cita.estado === 'cancelada' ? 'border-red-100 opacity-60' : esPendiente ? 'border-yellow-300' : pasada ? 'border-gray-200' : 'border-blue-200'}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
                             <h4 className="font-semibold text-gray-900">{cita.nombre_cliente}</h4>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cita.estado === 'confirmada' ? 'bg-green-100 text-green-700' : cita.estado === 'cancelada' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
                               {cita.estado}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-500">{cita.email_cliente}</p>
-                          <p className="text-sm font-medium text-gray-700 mt-2">📅 {fechaStr}</p>
+                          <p className="text-sm text-gray-500 truncate">{cita.email_cliente}</p>
+                          <p className="text-sm font-medium text-gray-700 mt-1">📅 {fechaStr}</p>
                           {cita.notas && <p className="text-sm text-gray-500 mt-1">📝 {cita.notas}</p>}
                         </div>
-                        <div className="flex flex-col gap-2 ml-4">
-                          {cita.meeting_url && cita.estado !== 'cancelada' && (
-                            <a href={cita.meeting_url} target="_blank" rel="noopener noreferrer"
-                              className="text-xs px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors text-center">
-                              Ingresar →
-                            </a>
-                          )}
-                          {esPendiente && (
-                            <button onClick={() => handleConfirmarCita(cita)}
-                              className="text-xs px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg font-medium transition-colors">
-                              Confirmar
+                      </div>
+                      {/* Botones siempre en fila al fondo */}
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {cita.meeting_url && cita.estado !== 'cancelada' && (
+                          <a href={cita.meeting_url} target="_blank" rel="noopener noreferrer"
+                            className="text-xs px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium transition-colors">
+                            Ingresar →
+                          </a>
+                        )}
+                        {esPendiente && (
+                          <button onClick={() => handleConfirmarCita(cita)}
+                            className="text-xs px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded-lg font-medium transition-colors">
+                            Confirmar
+                          </button>
+                        )}
+                        {cita.estado !== 'cancelada' && (
+                          <>
+                            <button onClick={() => abrirEditarCita(cita)}
+                              className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors">
+                              Editar
                             </button>
-                          )}
-                          {cita.estado !== 'cancelada' && (
-                            <>
-                              <button onClick={() => abrirEditarCita(cita)}
-                                className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors">
-                                Editar
-                              </button>
-                              <button onClick={() => setConfirmarCancelar(cita)}
-                                className="text-xs px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-medium transition-colors">
-                                Cancelar
-                              </button>
-                            </>
-                          )}
-                        </div>
+                            <button onClick={() => setConfirmarCancelar(cita)}
+                              className="text-xs px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-medium transition-colors">
+                              Cancelar
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   )
