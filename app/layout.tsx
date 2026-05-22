@@ -15,12 +15,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Abogados en Santiago | Toro Pacheco & Asociados — Laboral, Familia y Civil",
-  description: "Abogados en Santiago especializados en derecho laboral, familia y deudas. Consulta gratuita en 24h. Más de 200 casos resueltos. Llámanos hoy.",
-  keywords: "abogado laboral Santiago, abogado familia Chile, defensa embargo, juicio ejecutivo Chile, divorcio Chile",
+  title: "Defensa ante Deudas y Embargos en Chile | Toro Pacheco & Asociados",
+  description: "¿Juicio ejecutivo, embargo o deuda CAE? Abogados especialistas en defensa de deudores en Santiago. Consulta gratuita en 24h. Más de 200 casos resueltos.",
+  keywords: "defensa juicio ejecutivo Chile, abogado embargo Santiago, deuda CAE abogado, paralizar embargo Chile, abogado deudas Santiago",
   openGraph: {
-    title: "Toro Pacheco & Asociados — Abogados en Santiago",
-    description: "Consulta gratuita en 24h. Especialistas en derecho laboral, familia y deudas.",
+    title: "Toro Pacheco & Asociados — Defensa ante Deudas y Embargos",
+    description: "¿Te embargaron o tienes un juicio ejecutivo? Te defendemos. Consulta gratuita en menos de 24h.",
     url: "https://www.toropachecoasociados.cl",
     siteName: "Toro Pacheco & Asociados",
     locale: "es_CL",
