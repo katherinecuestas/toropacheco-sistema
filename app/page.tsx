@@ -205,7 +205,7 @@ export default function Home() { // → "declaro el componente principal de la p
       </nav>
 
       {/* ═══ HERO ═════════════════════════════════════════════════════════════════ */}
-      <section id="inicio" className="lg:min-h-screen flex items-start pt-20 pb-4 lg:pb-0 relative" style={{ backgroundColor: '#FDFBF5' }}>
+      <section id="inicio" className="lg:min-h-screen flex items-start pt-28 lg:pt-32 pb-4 lg:pb-0 relative" style={{ backgroundColor: '#FDFBF5' }}>
         {/* → "sección principal: ocupa toda la pantalla, fondo crema, el pt-20 deja espacio para el navbar fijo" */}
         <div className="absolute top-0 left-0 right-0 h-28 pointer-events-none z-10"
           style={{ background: `linear-gradient(to bottom, ${azulProfundo}, transparent)` }} />
