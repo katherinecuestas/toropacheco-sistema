@@ -1,6 +1,7 @@
 'use client' // → "le digo a Next.js: este componente corre en el navegador, no en el servidor"
 
 import { useState } from 'react'                        // → "traigo useState para poder tener variables que cambian y re-dibujan la pantalla"
+import Image from 'next/image'                          // → "traigo el componente Image de Next.js para optimizar carga y evitar layout shift"
 import { enviarConsulta } from '@/lib/consultas'         // → "traigo la función que manda una consulta de texto al servidor"
 import { obtenerSlotsDisponibles } from '@/lib/citas'   // → "traigo la función que me dice qué horarios de videollamada están libres"
 
@@ -122,10 +123,10 @@ export default function Home() { // → "declaro el componente principal de la p
         {/* → "la barra de navegación está fija arriba, siempre visible, encima de todo (z-50)" */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex justify-between items-center py-4">
           {/* → "contenedor centrado que distribuye el logo a la izquierda y los links a la derecha" */}
-          <div>
+          <a href="#inicio">
+            {/* → "logo clickeable que lleva al inicio de la página" */}
             <img src="/logo_claro.png" alt="Toro Pacheco & Asociados" className="h-10 sm:h-16 w-auto" />
-            {/* → "logo del estudio: pequeño en móvil (h-10), más grande en tablet/desktop (h-16)" */}
-          </div>
+          </a>
 
           {/* Links desktop — solo visibles en pantallas medianas o grandes */}
           <div className="hidden md:flex gap-8 text-base font-medium">
@@ -204,7 +205,7 @@ export default function Home() { // → "declaro el componente principal de la p
       </nav>
 
       {/* ═══ HERO ═════════════════════════════════════════════════════════════════ */}
-      <section className="lg:min-h-screen flex items-start pt-20 pb-4 lg:pb-0 relative" style={{ backgroundColor: '#FDFBF5' }}>
+      <section id="inicio" className="lg:min-h-screen flex items-start pt-20 pb-4 lg:pb-0 relative" style={{ backgroundColor: '#FDFBF5' }}>
         {/* → "sección principal: ocupa toda la pantalla, fondo crema, el pt-20 deja espacio para el navbar fijo" */}
         <div className="absolute top-0 left-0 right-0 h-28 pointer-events-none z-10"
           style={{ background: `linear-gradient(to bottom, ${azulProfundo}, transparent)` }} />
@@ -292,13 +293,15 @@ export default function Home() { // → "declaro el componente principal de la p
               </div>
 
               {/* Estadísticas */}
-              <div className="flex gap-6 pt-6 border-t mx-auto lg:mx-0 w-fit" style={{ borderColor: '#EDE8DC' }}>
-                {/* → "grilla de 2 columnas para los números destacados, separada con una línea dorada" */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-6 border-t mx-auto lg:mx-0" style={{ borderColor: '#EDE8DC' }}>
+                {/* → "grilla de 2 columnas en móvil, 4 en sm+, para los números destacados" */}
                 {[
-                  { número: '24h', texto: 'Tiempo de respuesta' },
-                  { número: '90%', texto: 'Tasa de éxito' },
+                  { número: '24h', texto: 'Respuesta garantizada' },
+                  { número: '90%', texto: 'Éxito en juicios' },
+                  { número: '+50', texto: 'Clientes atendidos' },
+                  { número: '100%', texto: 'Compromiso con el cliente' },
                 ].map(stat => (
-                  // → "recorro los dos stats y dibujo cada uno"
+                  // → "recorro los cuatro stats y dibujo cada uno"
                   <div key={stat.texto} className="text-center lg:text-left">
                     <p className="text-3xl font-bold" style={{ fontFamily: 'var(--font-playfair), serif', color: azul }}>
                       {stat.número}
@@ -316,9 +319,12 @@ export default function Home() { // → "declaro el componente principal de la p
               {/* → "esta columna solo existe en desktop (hidden lg:flex), ocupa 5/12 columnas, con márgenes negativos para que la imagen se expanda más" */}
               <div className="w-full h-[750px] relative flex items-end justify-center">
                 {/* → "contenedor de altura fija para que la imagen siempre ocupe el mismo espacio" */}
-                <img
+                <Image
                   src="/justicia2.png"
                   alt="Toro Pacheco & Asociados"
+                  width={600}
+                  height={750}
+                  priority
                   className="h-full w-auto object-contain object-bottom drop-shadow-2xl"
                   style={{
                     maxWidth: '140%',
