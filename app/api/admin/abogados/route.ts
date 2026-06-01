@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(
 export async function GET() {
   try {
     const { data, error } = await supabaseAdmin
-      .from('abogados')
+      .from('usuarios')
       .select('*')
       .order('created_at', { ascending: false })
 
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const nombreCompleto = [nombres, apellido_paterno, apellido_materno].filter(Boolean).join(' ')
 
     const { data: abogado, error: dbError } = await supabaseAdmin
-      .from('abogados')
+      .from('usuarios')
       .insert({
         auth_user_id: authData.user.id,
         email,
@@ -82,7 +82,7 @@ export async function PUT(request: NextRequest) {
     const nombreCompleto = [nombres, apellido_paterno, apellido_materno].filter(Boolean).join(' ')
 
     const { data, error } = await supabaseAdmin
-      .from('abogados')
+      .from('usuarios')
       .update({
         nombres: nombres || null,
         apellido_paterno: apellido_paterno || null,
@@ -114,7 +114,7 @@ export async function PATCH(request: NextRequest) {
     const { id, auth_user_id, action, estado, password } = await request.json()
 
     if (action === 'toggle-estado') {
-      await supabaseAdmin.from('abogados').update({ estado }).eq('id', id)
+      await supabaseAdmin.from('usuarios').update({ estado }).eq('id', id)
       await supabaseAdmin.auth.admin.updateUserById(auth_user_id, {
         ban_duration: estado ? 'none' : '876000h',
       })
@@ -138,7 +138,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const { id, auth_user_id } = await request.json()
 
-    await supabaseAdmin.from('abogados').delete().eq('id', id)
+    await supabaseAdmin.from('usuarios').delete().eq('id', id)
     await supabaseAdmin.auth.admin.deleteUser(auth_user_id)
 
     return NextResponse.json({ success: true })

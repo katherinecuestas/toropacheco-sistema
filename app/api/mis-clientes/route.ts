@@ -11,7 +11,7 @@ async function getAbogadoId(request: Request) {
   if (!token) return null
   const { data: { user } } = await supabaseAdmin.auth.getUser(token)
   if (!user) return null
-  const { data } = await supabaseAdmin.from('abogados').select('id').eq('auth_user_id', user.id).maybeSingle()
+  const { data } = await supabaseAdmin.from('usuarios').select('id').eq('auth_user_id', user.id).maybeSingle()
   return data?.id ?? null
 }
 
@@ -20,13 +20,21 @@ export async function GET(request: Request) {
     const abogadoId = await getAbogadoId(request)
     if (!abogadoId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const { data } = await supabaseAdmin
-      .from('contratos')
-      .select('*, clientes(*)')
-      .eq('abogado_id', abogadoId)
-      .order('created_at', { ascending: false })
+    const [{ data: clientes }, { data: contratos }] = await Promise.all([
+      supabaseAdmin.from('clientes').select('*').order('created_at', { ascending: false }),
+      supabaseAdmin.from('contratos').select('*').eq('abogado_id', abogadoId),
+    ])
 
-    return NextResponse.json({ clientes: data ?? [] })
+    const contratoByClienteId = Object.fromEntries(
+      (contratos ?? []).map(c => [c.cliente_id, c])
+    )
+
+    const result = (clientes ?? []).map(c => ({
+      ...c,
+      contrato: contratoByClienteId[c.id] ?? null,
+    }))
+
+    return NextResponse.json({ clientes: result })
   } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
@@ -37,24 +45,31 @@ export async function POST(request: Request) {
     const abogadoId = await getAbogadoId(request)
     if (!abogadoId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const { nombre, rut, email, telefono, tipo_servicio, descripcion, fecha_inicio, monto_total, monto_pie } = await request.json()
+    const { nombre, rut, email, telefono, tipo_servicio, descripcion, fecha_inicio, monto_total, monto_pie, clienteExistenteId } = await request.json()
 
     const saldo = monto_total - monto_pie
 
-    const { data: cliente, error: clienteError } = await supabaseAdmin
-      .from('clientes')
-      .insert({ nombre, rut, email, telefono })
-      .select().single()
+    let clienteId: number
 
-    if (clienteError) return NextResponse.json({ error: clienteError.message }, { status: 400 })
+    if (clienteExistenteId) {
+      clienteId = clienteExistenteId
+    } else {
+      const { data: nuevoCliente, error: clienteError } = await supabaseAdmin
+        .from('clientes')
+        .insert({ nombre, rut, email, telefono })
+        .select().single()
+      if (clienteError) return NextResponse.json({ error: clienteError.message }, { status: 400 })
+      clienteId = nuevoCliente.id
+    }
 
     const { data: contrato, error: contratoError } = await supabaseAdmin
       .from('contratos')
-      .insert({ cliente_id: cliente.id, abogado_id: abogadoId, tipo_servicio, descripcion, fecha_inicio, monto_total, monto_pie, saldo })
+      .insert({ cliente_id: clienteId, abogado_id: abogadoId, tipo_servicio, descripcion, fecha_inicio, monto_total, monto_pie, saldo })
       .select().single()
 
     if (contratoError) return NextResponse.json({ error: contratoError.message }, { status: 400 })
 
+    const { data: cliente } = await supabaseAdmin.from('clientes').select('*').eq('id', clienteId).single()
     return NextResponse.json({ success: true, contrato: { ...contrato, clientes: cliente } })
   } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

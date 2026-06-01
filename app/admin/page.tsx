@@ -10,11 +10,13 @@ import {
   obtenerContratosCliente, crearContrato, editarContrato, eliminarContrato,
   obtenerCuotasContrato, crearCuota, editarCuota, eliminarCuota,
   obtenerTimelineContrato, crearEvento, editarEvento, eliminarEvento,
-  type Abogado,
+  type Usuario,
 } from '@/lib/admin'
 import { cerrarSesion } from '@/lib/auth'
+import { useInactivityLogout } from '@/lib/useInactivityLogout'
+import { supabase } from '@/lib/supabase'
 
-type Vista = 'inicio' | 'abogados' | 'consultas' | 'clientes'
+type Vista = 'inicio' | 'abogados' | 'consultas' | 'clientes' | 'supervisores'
 
 const DOMINIO = 'toropachecoasociados.cl'
 
@@ -46,23 +48,26 @@ export default function AdminPage() {
   const router = useRouter()
   const [vista, setVista] = useState<Vista>('inicio')
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({ totalAbogados: 0, abogadosActivos: 0, totalConsultas: 0, consultasNuevas: 0, consultasRespondidas: 0 })
-  const [abogados, setAbogados] = useState<Abogado[]>([])
+  const [stats, setStats] = useState({ totalUsuarios: 0, abogadosActivos: 0, totalConsultas: 0, consultasNuevas: 0, consultasRespondidas: 0 })
+  const [abogados, setUsuarios] = useState<Usuario[]>([])
   const [consultas, setConsultas] = useState<any[]>([])
   const [filtroEstado, setFiltroEstado] = useState('todos')
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null)
 
-  // Abogados CRUD
-  const [modalCrearAbogado, setModalCrearAbogado] = useState(false)
-  const [formCrearAbogado, setFormCrearAbogado] = useState(EMPTY_ABOGADO)
-  const [creandoAbogado, setCreandoAbogado] = useState(false)
-  const [abogadoEditando, setAbogadoEditando] = useState<Abogado | null>(null)
-  const [formEditarAbogado, setFormEditarAbogado] = useState({
+  // Usuarios CRUD
+  const [modalCrearUsuario, setModalCrearUsuario] = useState(false)
+  const [formCrearUsuario, setFormCrearUsuario] = useState(EMPTY_ABOGADO)
+  const [creandoUsuario, setCreandoUsuario] = useState(false)
+  const [modalCrearSupervisor, setModalCrearSupervisor] = useState(false)
+  const [formSupervisor, setFormSupervisor] = useState({ nombre: '', email: '', password: '' })
+  const [creandoSupervisor, setCreandoSupervisor] = useState(false)
+  const [abogadoEditando, setUsuarioEditando] = useState<Usuario | null>(null)
+  const [formEditarUsuario, setFormEditarUsuario] = useState({
     email: '', nombres: '', apellido_paterno: '', apellido_materno: '',
     rut: '', dv: '', nombre_usuario: '', telefono: '', is_admin: false, estado: true,
   })
-  const [editandoAbogado, setEditandoAbogado] = useState(false)
-  const [modalPassword, setModalPassword] = useState<Abogado | null>(null)
+  const [editandoUsuario, setEditandoUsuario] = useState(false)
+  const [modalPassword, setModalPassword] = useState<Usuario | null>(null)
   const [nuevaPassword, setNuevaPassword] = useState('')
   const [guardandoPassword, setGuardandoPassword] = useState(false)
   const [togglandoEstado, setTogglandoEstado] = useState<number | null>(null)
@@ -100,16 +105,27 @@ export default function AdminPage() {
   // Eliminar genérico
   const [confirmarEliminar, setConfirmarEliminar] = useState<{ tipo: string; id: number; auth_user_id?: string } | null>(null)
   const [eliminando, setEliminando] = useState(false)
+  const [adminNombre, setAdminNombre] = useState('')
+  const [modalPasswordAdmin, setModalPasswordAdmin] = useState(false)
+  const [formPasswordAdmin, setFormPasswordAdmin] = useState({ actual: '', nueva: '', confirmar: '' })
+  const [guardandoPasswordAdmin, setGuardandoPasswordAdmin] = useState(false)
 
   useEffect(() => {
     async function cargar() {
       const esAdmin = await verificarAdmin()
       if (!esAdmin) { router.push('/dashboard'); return }
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: u } = await supabase.from('usuarios').select('nombres, nombre_negocio').eq('auth_user_id', user.id).maybeSingle()
+        setAdminNombre(u?.nombres?.split(' ')[0] ?? u?.nombre_negocio?.split(' ')[0] ?? 'Admin')
+      }
       await recargarBase()
       setLoading(false)
     }
     cargar()
   }, [router])
+
+  useInactivityLogout(() => router.push('/login'))
 
   async function recargarBase() {
     const [statsData, abogadosData, consultasData, clientesData] = await Promise.all([
@@ -119,7 +135,7 @@ export default function AdminPage() {
       obtenerTodosClientes(),
     ])
     setStats(statsData)
-    if (abogadosData.abogados) setAbogados(abogadosData.abogados)
+    if (abogadosData.abogados) setUsuarios(abogadosData.abogados)
     if (consultasData.consultas) setConsultas(consultasData.consultas)
     if (clientesData.clientes) setClientes(clientesData.clientes)
   }
@@ -147,29 +163,29 @@ export default function AdminPage() {
   }
 
   // --- ABOGADOS ---
-  async function handleCrearAbogado(e: React.SyntheticEvent<HTMLFormElement>) {
+  async function handleCrearUsuario(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
-    setCreandoAbogado(true)
+    setCreandoUsuario(true)
     const result = await crearAbogado({
-      nombres: formCrearAbogado.nombres,
-      apellido_paterno: formCrearAbogado.apellido_paterno,
-      apellido_materno: formCrearAbogado.apellido_materno,
-      rut: formCrearAbogado.rut,
-      dv: formCrearAbogado.dv,
-      nombre_usuario: formCrearAbogado.nombre_usuario,
-      email: formCrearAbogado.email,
-      password: formCrearAbogado.password,
-      telefono: formCrearAbogado.telefono,
-      is_admin: formCrearAbogado.is_admin,
+      nombres: formCrearUsuario.nombres,
+      apellido_paterno: formCrearUsuario.apellido_paterno,
+      apellido_materno: formCrearUsuario.apellido_materno,
+      rut: formCrearUsuario.rut,
+      dv: formCrearUsuario.dv,
+      nombre_usuario: formCrearUsuario.nombre_usuario,
+      email: formCrearUsuario.email,
+      password: formCrearUsuario.password,
+      telefono: formCrearUsuario.telefono,
+      is_admin: formCrearUsuario.is_admin,
     })
-    if (result.success) { mostrarMensaje('exito', 'Abogado creado.'); setModalCrearAbogado(false); setFormCrearAbogado(EMPTY_ABOGADO); await recargarBase() }
+    if (result.success) { mostrarMensaje('exito', 'Usuario creado.'); setModalCrearUsuario(false); setFormCrearUsuario(EMPTY_ABOGADO); await recargarBase() }
     else mostrarMensaje('error', result.error || 'Error.')
-    setCreandoAbogado(false)
+    setCreandoUsuario(false)
   }
 
-  function abrirEditarAbogado(abogado: Abogado) {
-    setAbogadoEditando(abogado)
-    setFormEditarAbogado({
+  function abrirEditarUsuario(abogado: Usuario) {
+    setUsuarioEditando(abogado)
+    setFormEditarUsuario({
       email: abogado.email,
       nombres: abogado.nombres || '',
       apellido_paterno: abogado.apellido_paterno || '',
@@ -183,21 +199,21 @@ export default function AdminPage() {
     })
   }
 
-  async function handleEditarAbogado(e: React.SyntheticEvent<HTMLFormElement>) {
+  async function handleEditarUsuario(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!abogadoEditando) return
-    setEditandoAbogado(true)
+    setEditandoUsuario(true)
     const result = await editarAbogado({
       id: abogadoEditando.id,
       auth_user_id: abogadoEditando.auth_user_id,
-      ...formEditarAbogado,
+      ...formEditarUsuario,
     })
-    if (result.success) { mostrarMensaje('exito', 'Abogado actualizado.'); setAbogadoEditando(null); await recargarBase() }
+    if (result.success) { mostrarMensaje('exito', 'Usuario actualizado.'); setUsuarioEditando(null); await recargarBase() }
     else mostrarMensaje('error', result.error || 'Error.')
-    setEditandoAbogado(false)
+    setEditandoUsuario(false)
   }
 
-  async function handleToggleEstado(a: Abogado) {
+  async function handleToggleEstado(a: Usuario) {
     setTogglandoEstado(a.id)
     const result = await toggleEstadoAbogadoAdmin(a.id, a.auth_user_id, !a.estado)
     if (result.success) await recargarBase()
@@ -341,33 +357,36 @@ export default function AdminPage() {
 
       {/* Navbar */}
       <nav className="border-b" style={{ backgroundColor: azulProfundo, borderColor: '#243B55' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="px-4 sm:px-6">
           <div className="h-14 sm:h-16 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-shrink-0">
               <img src="/logo_claro.png" alt="Toro Pacheco" className="h-9 sm:h-11 w-auto" />
-              <span className="text-xs hidden sm:inline px-2 py-0.5 rounded font-semibold" style={{ backgroundColor: dorado + '33', color: dorado }}>ADMIN</span>
             </div>
-            <div className="flex items-center gap-1 overflow-x-auto">
-              {(['inicio', 'abogados', 'consultas', 'clientes'] as Vista[]).map(v => (
-                <button key={v} onClick={() => setVista(v)}
-                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg transition-all whitespace-nowrap flex-shrink-0 capitalize"
-                  style={vista === v
-                    ? { backgroundColor: dorado, color: azulProfundo }
-                    : { color: 'rgba(255,255,255,0.65)' }}>
-                  {v}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:flex items-center gap-2 mr-1">
+                <span className="text-sm text-white opacity-70">{adminNombre}</span>
+                <span className="text-xs px-2 py-0.5 rounded font-bold" style={{ backgroundColor: dorado + '33', color: dorado }}>ADMIN</span>
+              </span>
+              <button onClick={() => { setFormPasswordAdmin({ actual: '', nueva: '', confirmar: '' }); setModalPasswordAdmin(true) }}
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-all hover:opacity-80"
+                style={{ color: 'rgba(255,255,255,0.55)' }}>
+                Contraseña
+              </button>
+              <a href="/" className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-all hover:opacity-80"
+                style={{ color: 'rgba(255,255,255,0.55)' }}>
+                ← Sitio
+              </a>
               <button onClick={async () => { await cerrarSesion(); router.push('/login') }}
-                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border whitespace-nowrap flex-shrink-0 transition-all ml-1"
-                style={{ borderColor: '#EF444455', color: '#FCA5A5' }}>
-                Salir
+                className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border whitespace-nowrap transition-all"
+                style={{ borderColor: dorado + '88', color: dorado }}>
+                Cerrar sesión
               </button>
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <main className="px-4 sm:px-6 py-6 sm:py-8">
 
         {mensaje && (
           <div className={`mb-6 p-4 rounded-xl text-sm font-medium border ${mensaje.tipo === 'exito' ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
@@ -378,17 +397,19 @@ export default function AdminPage() {
         {/* INICIO */}
         {vista === 'inicio' && (
           <div>
-            {/* Hero */}
-            <div className="rounded-2xl p-6 mb-6 text-white" style={{ backgroundColor: azulProfundo }}>
+            {/* Banner */}
+            <div className="rounded-2xl p-5 sm:p-6 mb-6 text-white" style={{ backgroundColor: azulProfundo }}>
               <p className="text-xs font-bold tracking-widest mb-1" style={{ color: dorado }}>PANEL DE ADMINISTRACIÓN</p>
-              <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-playfair), serif' }}>Toro Pacheco &amp; Asociados</h1>
-              <p className="text-sm mt-1 opacity-50">Sistema de gestión interno</p>
+              <h1 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: 'var(--font-playfair), serif' }}>
+                Bienvenido, {adminNombre || 'Administrador'} 👋
+              </h1>
+              <p className="text-sm mt-1 opacity-60">Sistema de gestión — Toro Pacheco &amp; Asociados</p>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
               {[
-                { label: 'Abogados', valor: stats.totalAbogados, color: azul },
+                { label: 'Usuarios', valor: stats.totalUsuarios, color: azul },
                 { label: 'Activos', valor: stats.abogadosActivos, color: '#10B981' },
                 { label: 'Consultas', valor: stats.totalConsultas, color: azul },
                 { label: 'Nuevas', valor: stats.consultasNuevas, color: dorado },
@@ -401,19 +422,26 @@ export default function AdminPage() {
               ))}
             </div>
 
-            {/* Accesos rápidos */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {[
-                { titulo: 'Abogados', desc: `${stats.abogadosActivos} activos`, vista: 'abogados' as Vista, bg: azul },
-                { titulo: 'Consultas', desc: `${stats.consultasNuevas} pendientes`, vista: 'consultas' as Vista, bg: dorado },
-                { titulo: 'Clientes', desc: `${clientes.length} registrados`, vista: 'clientes' as Vista, bg: azulProfundo },
-              ].map(card => (
-                <button key={card.titulo} onClick={() => setVista(card.vista)}
-                  className="rounded-xl p-6 text-left text-white transition-all hover:opacity-90 hover:shadow-lg"
-                  style={{ backgroundColor: card.bg }}>
-                  <h3 className="font-bold text-lg mb-1" style={{ fontFamily: 'var(--font-playfair), serif' }}>{card.titulo}</h3>
-                  <p className="text-sm opacity-70">{card.desc}</p>
-                  <p className="text-xs mt-3 opacity-50">Ver sección →</p>
+            {/* Cards de navegación */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {([
+                { titulo: 'Usuarios',    icon: '⚖️',  desc: `${stats.abogadosActivos} activos de ${stats.totalUsuarios}`,  v: 'abogados'    as Vista, bg: azul },
+                { titulo: 'Consultas',   icon: '💬',  desc: `${stats.consultasNuevas} nuevas pendientes`,                  v: 'consultas'   as Vista, bg: azulProfundo },
+                { titulo: 'Clientes',    icon: '👤',  desc: `${clientes.length} registrados`,                              v: 'clientes'    as Vista, bg: azul },
+                { titulo: 'Supervisores',icon: '🔎',  desc: 'Gestionar supervisores',                                      v: 'supervisores' as Vista, bg: azulProfundo },
+              ]).map(card => (
+                <button key={card.titulo} onClick={() => setVista(card.v)}
+                  className="group text-left rounded-2xl p-6 sm:p-8 text-white transition-all duration-200 focus:outline-none"
+                  style={{
+                    backgroundColor: card.bg,
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+                    transform: 'scale(1)',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.03)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 32px rgba(0,0,0,0.22)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.12)' }}>
+                  <span className="text-4xl sm:text-5xl block mb-4">{card.icon}</span>
+                  <p className="text-base sm:text-lg font-bold mb-1" style={{ fontFamily: 'var(--font-playfair), serif' }}>{card.titulo}</p>
+                  <p className="text-xs sm:text-sm opacity-60 leading-relaxed">{card.desc}</p>
                 </button>
               ))}
             </div>
@@ -423,9 +451,10 @@ export default function AdminPage() {
         {/* ABOGADOS */}
         {vista === 'abogados' && (
           <div>
+            <button onClick={() => setVista('inicio')} className="flex items-center gap-1.5 text-sm font-medium mb-5 transition-opacity hover:opacity-70" style={{ color: azul }}>← Volver</button>
             <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">Abogados ({abogados.length})</h1>
-              <button onClick={() => setModalCrearAbogado(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">+ Nuevo abogado</button>
+              <h1 className="text-2xl font-bold text-gray-900">Usuarios ({abogados.length})</h1>
+              <button onClick={() => setModalCrearUsuario(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">+ Nuevo abogado</button>
             </div>
 
             {abogados.length === 0 ? (
@@ -446,7 +475,7 @@ export default function AdminPage() {
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h3 className="font-bold text-gray-900 text-lg">{nombreCompleto}</h3>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a.is_admin ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
-                              {a.is_admin ? 'Admin' : 'Abogado'}
+                              {a.is_admin ? 'Admin' : 'Usuario'}
                             </span>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a.estado ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                               {a.estado ? 'Activo' : 'Deshabilitado'}
@@ -455,7 +484,7 @@ export default function AdminPage() {
                           <p className="text-sm text-gray-400">Creado el {fechaCreacion}</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          <button onClick={() => abrirEditarAbogado(a)}
+                          <button onClick={() => abrirEditarUsuario(a)}
                             className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-medium">
                             Editar
                           </button>
@@ -524,6 +553,7 @@ export default function AdminPage() {
         {/* CONSULTAS */}
         {vista === 'consultas' && (
           <div>
+            <button onClick={() => setVista('inicio')} className="flex items-center gap-1.5 text-sm font-medium mb-5 transition-opacity hover:opacity-70" style={{ color: azul }}>← Volver</button>
             <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
               <h1 className="text-2xl font-bold text-gray-900">Consultas</h1>
               <div className="flex gap-3">
@@ -560,8 +590,9 @@ export default function AdminPage() {
 
         {/* CLIENTES */}
         {vista === 'clientes' && (
+          <div>
+            <button onClick={() => setVista('inicio')} className="flex items-center gap-1.5 text-sm font-medium mb-5 transition-opacity hover:opacity-70" style={{ color: azul }}>← Volver</button>
           <div className="flex flex-col lg:flex-row gap-6">
-
             {/* Lista de clientes */}
             <div className="w-full lg:w-72 lg:flex-shrink-0">
               <h1 className="text-xl font-bold text-gray-900 mb-4">Clientes ({clientes.length})</h1>
@@ -714,25 +745,89 @@ export default function AdminPage() {
               )}
             </div>
           </div>
+          </div>
+        )}
+
+        {/* SUPERVISORES */}
+        {vista === 'supervisores' && (
+          <div>
+            <button onClick={() => setVista('inicio')} className="flex items-center gap-1.5 text-sm font-medium mb-5 transition-opacity hover:opacity-70" style={{ color: azul }}>← Volver</button>
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold text-gray-900">
+                Supervisores ({abogados.filter(a => (a as any).rol === 'supervisor').length})
+              </h1>
+              <button onClick={() => { setFormSupervisor({ nombre: '', email: '', password: '' }); setModalCrearSupervisor(true) }}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+                + Agregar supervisor
+              </button>
+            </div>
+
+            {abogados.filter(a => (a as any).rol === 'supervisor').length === 0 ? (
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                <p className="text-4xl mb-3">🔎</p>
+                <p className="text-gray-500">No hay supervisores registrados aún.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {abogados.filter(a => (a as any).rol === 'supervisor').map(s => (
+                  <div key={s.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${s.estado ? 'border-gray-200' : 'border-red-200 opacity-75'}`}>
+                    <div className="flex flex-wrap justify-between items-start gap-4 px-5 py-4">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <p className="font-bold text-gray-900">{s.nombre_negocio || s.nombres || s.email}</p>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">Supervisor</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.estado ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {s.estado ? 'Activo' : 'Deshabilitado'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500">{s.email}</p>
+                        {s.telefono && <p className="text-xs text-gray-400">{s.telefono}</p>}
+                        {s.rut && <p className="text-xs text-gray-400 font-mono">RUT: {s.rut}{s.dv ? `-${s.dv}` : ''}</p>}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => abrirEditarAbogado(s)}
+                          className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg font-medium transition-colors">
+                          Editar
+                        </button>
+                        <button onClick={() => { setModalPassword(s); setNuevaPassword('') }}
+                          className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors">
+                          Contraseña
+                        </button>
+                        <button onClick={() => handleToggleEstado(s)}
+                          disabled={togglandoEstado === s.id}
+                          className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50 ${s.estado ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>
+                          {togglandoEstado === s.id ? '...' : s.estado ? 'Deshabilitar' : 'Habilitar'}
+                        </button>
+                        <button onClick={() => setConfirmarEliminar({ tipo: 'abogado', id: s.id, auth_user_id: s.auth_user_id })}
+                          className="text-xs px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-medium transition-colors">
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
       </main>
 
       {/* MODAL: CREAR ABOGADO */}
-      {modalCrearAbogado && (
+      {modalCrearUsuario && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 py-8 overflow-y-auto">
           <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl">
             <h2 className="text-xl font-bold text-gray-900 mb-5">Nuevo abogado</h2>
-            <form onSubmit={handleCrearAbogado} className="space-y-3">
+            <form onSubmit={handleCrearUsuario} className="space-y-3">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Datos personales</p>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nombres *</label>
                 <input required type="text" placeholder="Ej: Juan Carlos"
-                  value={formCrearAbogado.nombres}
+                  value={formCrearUsuario.nombres}
                   onChange={e => {
                     const nombres = e.target.value
-                    const usuario = generarNombreUsuario(nombres, formCrearAbogado.apellido_paterno, formCrearAbogado.apellido_materno)
-                    setFormCrearAbogado({ ...formCrearAbogado, nombres, nombre_usuario: usuario, email: usuario ? `${usuario}@${DOMINIO}` : formCrearAbogado.email })
+                    const usuario = generarNombreUsuario(nombres, formCrearUsuario.apellido_paterno, formCrearUsuario.apellido_materno)
+                    setFormCrearUsuario({ ...formCrearUsuario, nombres, nombre_usuario: usuario, email: usuario ? `${usuario}@${DOMINIO}` : formCrearUsuario.email })
                   }}
                   className={inputCls} />
               </div>
@@ -740,22 +835,22 @@ export default function AdminPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Apellido paterno *</label>
                   <input required type="text" placeholder="Pérez"
-                    value={formCrearAbogado.apellido_paterno}
+                    value={formCrearUsuario.apellido_paterno}
                     onChange={e => {
                       const ap = e.target.value
-                      const usuario = generarNombreUsuario(formCrearAbogado.nombres, ap, formCrearAbogado.apellido_materno)
-                      setFormCrearAbogado({ ...formCrearAbogado, apellido_paterno: ap, nombre_usuario: usuario, email: usuario ? `${usuario}@${DOMINIO}` : formCrearAbogado.email })
+                      const usuario = generarNombreUsuario(formCrearUsuario.nombres, ap, formCrearUsuario.apellido_materno)
+                      setFormCrearUsuario({ ...formCrearUsuario, apellido_paterno: ap, nombre_usuario: usuario, email: usuario ? `${usuario}@${DOMINIO}` : formCrearUsuario.email })
                     }}
                     className={inputCls} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Apellido materno *</label>
                   <input required type="text" placeholder="García"
-                    value={formCrearAbogado.apellido_materno}
+                    value={formCrearUsuario.apellido_materno}
                     onChange={e => {
                       const am = e.target.value
-                      const usuario = generarNombreUsuario(formCrearAbogado.nombres, formCrearAbogado.apellido_paterno, am)
-                      setFormCrearAbogado({ ...formCrearAbogado, apellido_materno: am, nombre_usuario: usuario, email: usuario ? `${usuario}@${DOMINIO}` : formCrearAbogado.email })
+                      const usuario = generarNombreUsuario(formCrearUsuario.nombres, formCrearUsuario.apellido_paterno, am)
+                      setFormCrearUsuario({ ...formCrearUsuario, apellido_materno: am, nombre_usuario: usuario, email: usuario ? `${usuario}@${DOMINIO}` : formCrearUsuario.email })
                     }}
                     className={inputCls} />
                 </div>
@@ -764,15 +859,15 @@ export default function AdminPage() {
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">RUT</label>
                   <input type="text" placeholder="12345678"
-                    value={formCrearAbogado.rut}
-                    onChange={e => setFormCrearAbogado({ ...formCrearAbogado, rut: e.target.value })}
+                    value={formCrearUsuario.rut}
+                    onChange={e => setFormCrearUsuario({ ...formCrearUsuario, rut: e.target.value })}
                     className={inputCls} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">DV</label>
                   <input type="text" maxLength={1} placeholder="9"
-                    value={formCrearAbogado.dv}
-                    onChange={e => setFormCrearAbogado({ ...formCrearAbogado, dv: e.target.value })}
+                    value={formCrearUsuario.dv}
+                    onChange={e => setFormCrearUsuario({ ...formCrearUsuario, dv: e.target.value })}
                     className={inputCls} />
                 </div>
               </div>
@@ -780,31 +875,31 @@ export default function AdminPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Usuario generado</label>
                 <div className="flex items-center gap-0 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <span className="px-3 py-2.5 text-sm font-mono text-gray-800 flex-1">{formCrearAbogado.nombre_usuario || '—'}</span>
+                  <span className="px-3 py-2.5 text-sm font-mono text-gray-800 flex-1">{formCrearUsuario.nombre_usuario || '—'}</span>
                   <span className="px-3 py-2.5 text-xs text-gray-400 bg-gray-100 border-l border-gray-200">@{DOMINIO}</span>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email (editable)</label>
-                <input required type="email" value={formCrearAbogado.email}
-                  onChange={e => setFormCrearAbogado({ ...formCrearAbogado, email: e.target.value })}
+                <input required type="email" value={formCrearUsuario.email}
+                  onChange={e => setFormCrearUsuario({ ...formCrearUsuario, email: e.target.value })}
                   className={inputCls} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña *</label>
-                <input required type="password" value={formCrearAbogado.password}
-                  onChange={e => setFormCrearAbogado({ ...formCrearAbogado, password: e.target.value })}
+                <input required type="password" value={formCrearUsuario.password}
+                  onChange={e => setFormCrearUsuario({ ...formCrearUsuario, password: e.target.value })}
                   className={inputCls} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                <input type="tel" value={formCrearAbogado.telefono}
-                  onChange={e => setFormCrearAbogado({ ...formCrearAbogado, telefono: e.target.value })}
+                <input type="tel" value={formCrearUsuario.telefono}
+                  onChange={e => setFormCrearUsuario({ ...formCrearUsuario, telefono: e.target.value })}
                   className={inputCls} />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={creandoAbogado} className={btnPrimary} style={{ backgroundColor: azul }}>{creandoAbogado ? 'Creando...' : 'Crear abogado'}</button>
-                <button type="button" onClick={() => { setModalCrearAbogado(false); setFormCrearAbogado(EMPTY_ABOGADO) }} className={btnSecondary}>Cancelar</button>
+                <button type="submit" disabled={creandoUsuario} className={btnPrimary} style={{ backgroundColor: azul }}>{creandoUsuario ? 'Creando...' : 'Crear abogado'}</button>
+                <button type="button" onClick={() => { setModalCrearUsuario(false); setFormCrearUsuario(EMPTY_ABOGADO) }} className={btnSecondary}>Cancelar</button>
               </div>
             </form>
           </div>
@@ -816,16 +911,16 @@ export default function AdminPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 py-8 overflow-y-auto">
           <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl">
             <h2 className="text-xl font-bold text-gray-900 mb-5">Editar abogado</h2>
-            <form onSubmit={handleEditarAbogado} className="space-y-3">
+            <form onSubmit={handleEditarUsuario} className="space-y-3">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Datos personales</p>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nombres</label>
                 <input type="text" placeholder="Ej: Juan Carlos"
-                  value={formEditarAbogado.nombres}
+                  value={formEditarUsuario.nombres}
                   onChange={e => {
                     const nombres = e.target.value
-                    const usuario = generarNombreUsuario(nombres, formEditarAbogado.apellido_paterno, formEditarAbogado.apellido_materno)
-                    setFormEditarAbogado({ ...formEditarAbogado, nombres, nombre_usuario: usuario })
+                    const usuario = generarNombreUsuario(nombres, formEditarUsuario.apellido_paterno, formEditarUsuario.apellido_materno)
+                    setFormEditarUsuario({ ...formEditarUsuario, nombres, nombre_usuario: usuario })
                   }}
                   className={inputCls} />
               </div>
@@ -833,22 +928,22 @@ export default function AdminPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Apellido paterno</label>
                   <input type="text"
-                    value={formEditarAbogado.apellido_paterno}
+                    value={formEditarUsuario.apellido_paterno}
                     onChange={e => {
                       const ap = e.target.value
-                      const usuario = generarNombreUsuario(formEditarAbogado.nombres, ap, formEditarAbogado.apellido_materno)
-                      setFormEditarAbogado({ ...formEditarAbogado, apellido_paterno: ap, nombre_usuario: usuario })
+                      const usuario = generarNombreUsuario(formEditarUsuario.nombres, ap, formEditarUsuario.apellido_materno)
+                      setFormEditarUsuario({ ...formEditarUsuario, apellido_paterno: ap, nombre_usuario: usuario })
                     }}
                     className={inputCls} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Apellido materno</label>
                   <input type="text"
-                    value={formEditarAbogado.apellido_materno}
+                    value={formEditarUsuario.apellido_materno}
                     onChange={e => {
                       const am = e.target.value
-                      const usuario = generarNombreUsuario(formEditarAbogado.nombres, formEditarAbogado.apellido_paterno, am)
-                      setFormEditarAbogado({ ...formEditarAbogado, apellido_materno: am, nombre_usuario: usuario })
+                      const usuario = generarNombreUsuario(formEditarUsuario.nombres, formEditarUsuario.apellido_paterno, am)
+                      setFormEditarUsuario({ ...formEditarUsuario, apellido_materno: am, nombre_usuario: usuario })
                     }}
                     className={inputCls} />
                 </div>
@@ -856,14 +951,14 @@ export default function AdminPage() {
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">RUT</label>
-                  <input type="text" value={formEditarAbogado.rut}
-                    onChange={e => setFormEditarAbogado({ ...formEditarAbogado, rut: e.target.value })}
+                  <input type="text" value={formEditarUsuario.rut}
+                    onChange={e => setFormEditarUsuario({ ...formEditarUsuario, rut: e.target.value })}
                     className={inputCls} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">DV</label>
-                  <input type="text" maxLength={1} value={formEditarAbogado.dv}
-                    onChange={e => setFormEditarAbogado({ ...formEditarAbogado, dv: e.target.value })}
+                  <input type="text" maxLength={1} value={formEditarUsuario.dv}
+                    onChange={e => setFormEditarUsuario({ ...formEditarUsuario, dv: e.target.value })}
                     className={inputCls} />
                 </div>
               </div>
@@ -871,28 +966,28 @@ export default function AdminPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
                 <div className="flex items-center gap-0 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <span className="px-3 py-2.5 text-sm font-mono text-gray-800 flex-1">{formEditarAbogado.nombre_usuario || '—'}</span>
+                  <span className="px-3 py-2.5 text-sm font-mono text-gray-800 flex-1">{formEditarUsuario.nombre_usuario || '—'}</span>
                   <span className="px-3 py-2.5 text-xs text-gray-400 bg-gray-100 border-l border-gray-200">@{DOMINIO}</span>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input type="email" value={formEditarAbogado.email}
-                  onChange={e => setFormEditarAbogado({ ...formEditarAbogado, email: e.target.value })}
+                <input type="email" value={formEditarUsuario.email}
+                  onChange={e => setFormEditarUsuario({ ...formEditarUsuario, email: e.target.value })}
                   className={inputCls} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                <input type="tel" value={formEditarAbogado.telefono}
-                  onChange={e => setFormEditarAbogado({ ...formEditarAbogado, telefono: e.target.value })}
+                <input type="tel" value={formEditarUsuario.telefono}
+                  onChange={e => setFormEditarUsuario({ ...formEditarUsuario, telefono: e.target.value })}
                   className={inputCls} />
               </div>
               <div className="flex gap-6">
-                <label className="flex items-center gap-2"><input type="checkbox" checked={formEditarAbogado.estado} onChange={e => setFormEditarAbogado({ ...formEditarAbogado, estado: e.target.checked })} /><span className="text-sm">Activo</span></label>
+                <label className="flex items-center gap-2"><input type="checkbox" checked={formEditarUsuario.estado} onChange={e => setFormEditarUsuario({ ...formEditarUsuario, estado: e.target.checked })} /><span className="text-sm">Activo</span></label>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={editandoAbogado} className={btnPrimary} style={{ backgroundColor: azul }}>{editandoAbogado ? 'Guardando...' : 'Guardar'}</button>
-                <button type="button" onClick={() => setAbogadoEditando(null)} className={btnSecondary}>Cancelar</button>
+                <button type="submit" disabled={editandoUsuario} className={btnPrimary} style={{ backgroundColor: azul }}>{editandoUsuario ? 'Guardando...' : 'Guardar'}</button>
+                <button type="button" onClick={() => setUsuarioEditando(null)} className={btnSecondary}>Cancelar</button>
               </div>
             </form>
           </div>
@@ -905,7 +1000,7 @@ export default function AdminPage() {
           <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl">
             <h2 className="text-xl font-bold text-gray-900 mb-5">Nueva consulta</h2>
             <form onSubmit={handleCrearConsulta} className="space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Abogado *</label>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Usuario *</label>
                 <select value={formCrearConsulta.abogado_id} onChange={e => setFormCrearConsulta({ ...formCrearConsulta, abogado_id: e.target.value })} className={inputCls}>
                   <option value="">-- Selecciona --</option>
                   {abogados.filter(a => a.estado).map(a => <option key={a.id} value={a.id}>{a.nombre_negocio}</option>)}
@@ -1056,6 +1151,62 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* MODAL: CREAR SUPERVISOR */}
+      {modalCrearSupervisor && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
+            <h2 className="text-lg font-bold text-gray-900 mb-5">Nuevo supervisor</h2>
+            <form onSubmit={async e => {
+              e.preventDefault()
+              setCreandoSupervisor(true)
+              const res = await fetch('/api/admin/setup-supervisor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formSupervisor),
+              })
+              const data = await res.json()
+              if (data.success) {
+                mostrarMensaje('exito', 'Supervisor creado correctamente.')
+                setModalCrearSupervisor(false)
+                setFormSupervisor({ nombre: '', email: '', password: '' })
+                await recargarBase()
+              } else {
+                mostrarMensaje('error', data.error || 'Error al crear supervisor.')
+              }
+              setCreandoSupervisor(false)
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                <input required type="text" value={formSupervisor.nombre}
+                  onChange={e => setFormSupervisor(f => ({ ...f, nombre: e.target.value }))}
+                  placeholder="Ej: Vladimir" className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <input required type="email" value={formSupervisor.email}
+                  onChange={e => setFormSupervisor(f => ({ ...f, email: e.target.value }))}
+                  placeholder="supervisor@ejemplo.cl" className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña *</label>
+                <input required type="password" minLength={6} value={formSupervisor.password}
+                  onChange={e => setFormSupervisor(f => ({ ...f, password: e.target.value }))}
+                  placeholder="Mínimo 6 caracteres" className={inputCls} />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" disabled={creandoSupervisor}
+                  className={btnPrimary} style={{ backgroundColor: azul }}>
+                  {creandoSupervisor ? 'Creando...' : 'Crear supervisor'}
+                </button>
+                <button type="button" onClick={() => setModalCrearSupervisor(false)} className={btnSecondary}>
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* MODAL: CONFIRMAR ELIMINAR */}
       {confirmarEliminar && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
@@ -1067,6 +1218,51 @@ export default function AdminPage() {
               <button onClick={handleEliminar} disabled={eliminando} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 rounded-xl text-sm disabled:opacity-50">{eliminando ? 'Eliminando...' : 'Sí, eliminar'}</button>
               <button onClick={() => setConfirmarEliminar(null)} className={btnSecondary}>Cancelar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CAMBIAR CONTRASEÑA (ADMIN) */}
+      {modalPasswordAdmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-lg font-bold text-gray-900">Cambiar contraseña</h2>
+              <button onClick={() => setModalPasswordAdmin(false)} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
+            </div>
+            <form onSubmit={async e => {
+              e.preventDefault()
+              if (formPasswordAdmin.nueva !== formPasswordAdmin.confirmar) { mostrarMensaje('error', 'Las contraseñas no coinciden.'); return }
+              setGuardandoPasswordAdmin(true)
+              const { data: { user } } = await supabase.auth.getUser()
+              const { error: signInErr } = await supabase.auth.signInWithPassword({ email: user?.email ?? '', password: formPasswordAdmin.actual })
+              if (signInErr) { mostrarMensaje('error', 'Contraseña actual incorrecta.'); setGuardandoPasswordAdmin(false); return }
+              const { error } = await supabase.auth.updateUser({ password: formPasswordAdmin.nueva })
+              if (error) { mostrarMensaje('error', error.message); setGuardandoPasswordAdmin(false); return }
+              setModalPasswordAdmin(false)
+              setFormPasswordAdmin({ actual: '', nueva: '', confirmar: '' })
+              mostrarMensaje('exito', 'Contraseña actualizada.')
+              setGuardandoPasswordAdmin(false)
+            }} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: azul }}>Contraseña actual *</label>
+                <input type="password" required value={formPasswordAdmin.actual} onChange={e => setFormPasswordAdmin(f => ({ ...f, actual: e.target.value }))} className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: azul }}>Nueva contraseña *</label>
+                <input type="password" required minLength={6} value={formPasswordAdmin.nueva} onChange={e => setFormPasswordAdmin(f => ({ ...f, nueva: e.target.value }))} className={inputCls} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold mb-1" style={{ color: azul }}>Confirmar nueva *</label>
+                <input type="password" required value={formPasswordAdmin.confirmar} onChange={e => setFormPasswordAdmin(f => ({ ...f, confirmar: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="submit" disabled={guardandoPasswordAdmin} className="flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 text-white" style={{ backgroundColor: azul }}>
+                  {guardandoPasswordAdmin ? 'Guardando...' : 'Guardar'}
+                </button>
+                <button type="button" onClick={() => setModalPasswordAdmin(false)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 rounded-xl text-sm">Cancelar</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

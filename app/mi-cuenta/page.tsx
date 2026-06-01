@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { cerrarSesion } from '@/lib/auth'
+import { useInactivityLogout } from '@/lib/useInactivityLogout'
 import {
   obtenerDatosCliente,
   obtenerMisContratos,
@@ -66,6 +67,8 @@ export default function MiCuentaPage() {
     setTimeline(timelineRes.eventos)
   }
 
+  useInactivityLogout(() => router.push('/login'))
+
   async function handleCerrarSesion() {
     await cerrarSesion()
     router.push('/')
@@ -93,15 +96,15 @@ export default function MiCuentaPage() {
 
       {/* NAVBAR */}
       <nav className="border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center gap-3" style={{ backgroundColor: azulProfundo, borderColor: '#243B55' }}>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: dorado, color: azulProfundo }}>⚖</div>
-          <div>
-            <span className="text-sm font-bold text-white">TORO PACHECO</span>
-            <span className="text-xs ml-1" style={{ color: dorado }}>&amp; ASOCIADOS</span>
-          </div>
+        <div className="flex items-center">
+          <img src="/logo_claro.png" alt="Toro Pacheco & Asociados" className="h-10 w-auto" />
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <span className="text-sm text-white opacity-80">Hola, {cliente?.nombre.split(' ')[0]}</span>
+          <a href="/" className="text-xs px-3 py-1.5 rounded-lg transition-colors hover:opacity-80"
+            style={{ color: 'rgba(255,255,255,0.55)' }}>
+            ← Sitio
+          </a>
           <button onClick={handleCerrarSesion} className="text-xs px-3 py-1.5 rounded-lg border transition-colors" style={{ borderColor: dorado, color: dorado }}>
             Cerrar sesión
           </button>

@@ -78,7 +78,7 @@ export async function obtenerMisConsultas() {
     }
 
     const { data: abogado, error: abogadoError } = await supabase
-      .from('abogados')
+      .from('usuarios')
       .select('id')
       .eq('auth_user_id', user.id)
       .single()

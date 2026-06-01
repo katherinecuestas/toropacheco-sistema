@@ -10,7 +10,7 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { consultaId, abogadoId, nombreCliente, emailCliente, fechaHora, meetingUrl } = await request.json()
+    const { consultaId, abogadoId, nombreCliente, emailCliente, fechaHora, meetingUrl, creadaPorAbogado } = await request.json()
 
     // 1. Guardar cita en Supabase
     const { data: cita, error: citaError } = await supabaseAdmin
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         nombre_cliente: nombreCliente,
         email_cliente: emailCliente,
         fecha_hora: fechaHora,
-        estado: 'pendiente',
+        estado: creadaPorAbogado ? 'confirmada' : 'pendiente',
         ...(meetingUrl ? { meeting_url: meetingUrl } : {}),
       })
       .select()
@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: citaError.message }, { status: 400 })
     }
 
-    // 2. Notificar al estudio (cliente recibirá correo cuando Branco confirme)
     const fechaFormateada = new Date(fechaHora).toLocaleString('es-CL', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
@@ -39,9 +38,39 @@ export async function POST(request: NextRequest) {
     })
 
     // Emails: no-fatal — la cita ya fue creada aunque fallen
+    const emailCliente_html = creadaPorAbogado
+      ? // Caso 2: el abogado agendó — confirmación directa
+        `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1F3A5F;">Toro Pacheco & Asociados</h2>
+          <hr style="border: 1px solid #eee;" />
+          <p>Estimado/a <strong>${nombreCliente}</strong>,</p>
+          <p>Tu videoconsulta ha sido <strong>confirmada</strong> para el:</p>
+          <div style="background: #f5f0e8; padding: 16px; border-radius: 8px; margin: 16px 0; text-align: center;">
+            <p style="font-size: 18px; font-weight: bold; color: #1F3A5F; margin: 0;">${fechaFormateada}</p>
+          </div>
+          ${meetingUrl ? `<p style="text-align:center;"><a href="${meetingUrl}" style="display:inline-block;background:#1F3A5F;color:#C7B88A;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Unirme a la videollamada</a></p>` : ''}
+          <p style="color: #888; font-size: 12px;">Si tienes dudas puedes contactarnos a <a href="mailto:contacto@toropachecoasociados.cl">contacto@toropachecoasociados.cl</a> o al <a href="https://wa.me/56950944482">+56 9 50944482</a>.</p>
+          <hr style="border: 1px solid #eee;" />
+          <p style="color: #888; font-size: 12px;">Toro Pacheco & Asociados — contacto@toropachecoasociados.cl</p>
+        </div>`
+      : // Caso 1: el cliente agendó desde la landing — solicitud pendiente
+        `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1F3A5F;">Toro Pacheco & Asociados</h2>
+          <hr style="border: 1px solid #eee;" />
+          <p>Estimado/a <strong>${nombreCliente}</strong>,</p>
+          <p>Hemos recibido tu solicitud de videoconsulta para el:</p>
+          <div style="background: #f5f0e8; padding: 16px; border-radius: 8px; margin: 16px 0; text-align: center;">
+            <p style="font-size: 18px; font-weight: bold; color: #1F3A5F; margin: 0;">${fechaFormateada}</p>
+          </div>
+          <p style="color: #555;">Tu solicitud está siendo revisada. Recibirás un segundo correo una vez que el abogado confirme la cita.</p>
+          <p style="color: #888; font-size: 12px;">Si tienes dudas puedes contactarnos a <a href="mailto:contacto@toropachecoasociados.cl">contacto@toropachecoasociados.cl</a> o al <a href="https://wa.me/56950944482">+56 9 50944482</a>.</p>
+          <hr style="border: 1px solid #eee;" />
+          <p style="color: #888; font-size: 12px;">Toro Pacheco & Asociados — contacto@toropachecoasociados.cl</p>
+        </div>`
+
     Promise.all([
-      // Notificación al estudio
-      resend.emails.send({
+      // Notificación al estudio (solo cuando llega desde la landing)
+      ...(!creadaPorAbogado ? [resend.emails.send({
         from: 'Toro Pacheco & Asociados <no-reply@toropachecoasociados.cl>',
         to: 'contacto@toropachecoasociados.cl',
         subject: `Nueva solicitud de videoconsulta — ${nombreCliente}`,
@@ -57,27 +86,15 @@ export async function POST(request: NextRequest) {
             <p style="color: #888; font-size: 12px;">Notificación automática — Sistema Toro Pacheco</p>
           </div>
         `,
-      }),
-      // Acuse de recibo al cliente
+      })] : []),
+      // Email al cliente
       resend.emails.send({
         from: 'Toro Pacheco & Asociados <no-reply@toropachecoasociados.cl>',
         to: emailCliente,
-        subject: `Solicitud de videoconsulta recibida — ${fechaFormateada}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #1F3A5F;">Toro Pacheco & Asociados</h2>
-            <hr style="border: 1px solid #eee;" />
-            <p>Estimado/a <strong>${nombreCliente}</strong>,</p>
-            <p>Hemos recibido tu solicitud de videoconsulta para el:</p>
-            <div style="background: #f5f0e8; padding: 16px; border-radius: 8px; margin: 16px 0; text-align: center;">
-              <p style="font-size: 18px; font-weight: bold; color: #1F3A5F; margin: 0;">${fechaFormateada}</p>
-            </div>
-            <p style="color: #555;">Tu solicitud está siendo revisada. Recibirás un segundo correo una vez que el abogado confirme la cita.</p>
-            <p style="color: #888; font-size: 12px;">Si tienes dudas puedes contactarnos a <a href="mailto:contacto@toropachecoasociados.cl">contacto@toropachecoasociados.cl</a> o al <a href="https://wa.me/56950944482">+56 9 50944482</a>.</p>
-            <hr style="border: 1px solid #eee;" />
-            <p style="color: #888; font-size: 12px;">Toro Pacheco & Asociados — contacto@toropachecoasociados.cl</p>
-          </div>
-        `,
+        subject: creadaPorAbogado
+          ? `Videoconsulta confirmada — ${fechaFormateada}`
+          : `Solicitud de videoconsulta recibida — ${fechaFormateada}`,
+        html: emailCliente_html,
       }),
     ]).catch((err) => console.error('[crear-cita] Error enviando emails:', err))
 
