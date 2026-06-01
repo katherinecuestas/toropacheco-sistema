@@ -10,7 +10,7 @@ import {
   obtenerContratosCliente, crearContrato, editarContrato, eliminarContrato,
   obtenerCuotasContrato, crearCuota, editarCuota, eliminarCuota,
   obtenerTimelineContrato, crearEvento, editarEvento, eliminarEvento,
-  type Abogado,
+  type Usuario,
 } from '@/lib/admin'
 import { cerrarSesion } from '@/lib/auth'
 
@@ -47,7 +47,7 @@ export default function AdminPage() {
   const [vista, setVista] = useState<Vista>('inicio')
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({ totalAbogados: 0, abogadosActivos: 0, totalConsultas: 0, consultasNuevas: 0, consultasRespondidas: 0 })
-  const [abogados, setAbogados] = useState<Abogado[]>([])
+  const [abogados, setAbogados] = useState<Usuario[]>([])
   const [consultas, setConsultas] = useState<any[]>([])
   const [filtroEstado, setFiltroEstado] = useState('todos')
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null)
@@ -56,13 +56,13 @@ export default function AdminPage() {
   const [modalCrearAbogado, setModalCrearAbogado] = useState(false)
   const [formCrearAbogado, setFormCrearAbogado] = useState(EMPTY_ABOGADO)
   const [creandoAbogado, setCreandoAbogado] = useState(false)
-  const [abogadoEditando, setAbogadoEditando] = useState<Abogado | null>(null)
+  const [abogadoEditando, setAbogadoEditando] = useState<Usuario | null>(null)
   const [formEditarAbogado, setFormEditarAbogado] = useState({
     email: '', nombres: '', apellido_paterno: '', apellido_materno: '',
     rut: '', dv: '', nombre_usuario: '', telefono: '', is_admin: false, estado: true,
   })
   const [editandoAbogado, setEditandoAbogado] = useState(false)
-  const [modalPassword, setModalPassword] = useState<Abogado | null>(null)
+  const [modalPassword, setModalPassword] = useState<Usuario | null>(null)
   const [nuevaPassword, setNuevaPassword] = useState('')
   const [guardandoPassword, setGuardandoPassword] = useState(false)
   const [togglandoEstado, setTogglandoEstado] = useState<number | null>(null)
@@ -167,7 +167,7 @@ export default function AdminPage() {
     setCreandoAbogado(false)
   }
 
-  function abrirEditarAbogado(abogado: Abogado) {
+  function abrirEditarAbogado(abogado: Usuario) {
     setAbogadoEditando(abogado)
     setFormEditarAbogado({
       email: abogado.email,
@@ -197,7 +197,7 @@ export default function AdminPage() {
     setEditandoAbogado(false)
   }
 
-  async function handleToggleEstado(a: Abogado) {
+  async function handleToggleEstado(a: Usuario) {
     setTogglandoEstado(a.id)
     const result = await toggleEstadoAbogadoAdmin(a.id, a.auth_user_id, !a.estado)
     if (result.success) await recargarBase()
@@ -424,17 +424,17 @@ export default function AdminPage() {
         {vista === 'abogados' && (
           <div>
             <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">Abogados ({abogados.length})</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Abogados ({abogados.filter(a => a.rol === 'abogado').length})</h1>
               <button onClick={() => setModalCrearAbogado(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">+ Nuevo abogado</button>
             </div>
 
-            {abogados.length === 0 ? (
+            {abogados.filter(a => a.rol === 'abogado').length === 0 ? (
               <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
                 <p className="text-gray-400">No hay abogados registrados.</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {abogados.map(a => {
+                {abogados.filter(a => a.rol === 'abogado').map(a => {
                   const nombreCompleto = [a.nombres, a.apellido_paterno, a.apellido_materno].filter(Boolean).join(' ') || a.nombre_negocio
                   const rut = a.rut && a.dv ? `${a.rut}-${a.dv}` : a.rut || '—'
                   const fechaCreacion = new Date(a.created_at).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -446,7 +446,7 @@ export default function AdminPage() {
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h3 className="font-bold text-gray-900 text-lg">{nombreCompleto}</h3>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a.is_admin ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
-                              {a.is_admin ? 'Admin' : 'Abogado'}
+                              {a.is_admin ? 'Admin' : a.rol ?? 'abogado'}
                             </span>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a.estado ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                               {a.estado ? 'Activo' : 'Deshabilitado'}

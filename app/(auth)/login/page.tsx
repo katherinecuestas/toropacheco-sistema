@@ -33,7 +33,7 @@ function LoginForm() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setError('Error al obtener sesión.'); setLoading(false); return }
 
-    const { data: abogado } = await supabase.from('abogados').select('id').eq('auth_user_id', user.id).maybeSingle()
+    const { data: abogado } = await supabase.from('usuarios').select('id').eq('auth_user_id', user.id).maybeSingle()
     if (abogado) { router.push('/dashboard'); return }
 
     const { data: admin } = await supabase.from('admins').select('id').eq('auth_user_id', user.id).maybeSingle()

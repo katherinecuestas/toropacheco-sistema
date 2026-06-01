@@ -11,7 +11,7 @@ async function getAbogadoId(request: Request) {
   if (!token) return null
   const { data: { user } } = await supabaseAdmin.auth.getUser(token)
   if (!user) return null
-  const { data } = await supabaseAdmin.from('abogados').select('id').eq('auth_user_id', user.id).maybeSingle()
+  const { data } = await supabaseAdmin.from('usuarios').select('id').eq('auth_user_id', user.id).maybeSingle()
   return data?.id ?? null
 }
 

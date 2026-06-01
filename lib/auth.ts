@@ -26,7 +26,7 @@ export async function registrarAbogado(
 
     // 2. Crear registro en tabla abogados
     const { error: profileError } = await supabase
-      .from('abogados')
+      .from('usuarios')
       .insert([
         {
           auth_user_id: authData.user.id,
@@ -128,7 +128,7 @@ export async function obtenerDatosAbogado() {
     }
 
     const { data, error } = await supabase
-      .from('abogados')
+      .from('usuarios')
       .select('*')
       .eq('auth_user_id', user.id)
       .single()

@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-export interface Abogado {
+export interface Usuario {
   id: number
   created_at: string
   auth_user_id: string
@@ -16,6 +16,7 @@ export interface Abogado {
   telefono?: string
   estado: boolean
   is_admin: boolean
+  rol?: string
 }
 
 export async function verificarAdmin(): Promise<boolean> {
@@ -38,7 +39,7 @@ export async function obtenerTodosAbogados() {
 
 export async function toggleEstadoAbogado(id: number, estadoActual: boolean) {
   const { error } = await supabase
-    .from('abogados')
+    .from('usuarios')
     .update({ estado: !estadoActual })
     .eq('id', id)
 

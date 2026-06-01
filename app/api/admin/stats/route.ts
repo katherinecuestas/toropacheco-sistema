@@ -14,8 +14,8 @@ export async function GET() {
     { count: consultasNuevas },
     { count: consultasRespondidas },
   ] = await Promise.all([
-    supabaseAdmin.from('abogados').select('*', { count: 'exact', head: true }),
-    supabaseAdmin.from('abogados').select('*', { count: 'exact', head: true }).eq('estado', true),
+    supabaseAdmin.from('usuarios').select('*', { count: 'exact', head: true }),
+    supabaseAdmin.from('usuarios').select('*', { count: 'exact', head: true }).eq('estado', true),
     supabaseAdmin.from('consultas').select('*', { count: 'exact', head: true }),
     supabaseAdmin.from('consultas').select('*', { count: 'exact', head: true }).eq('estado', 'nueva'),
     supabaseAdmin.from('consultas').select('*', { count: 'exact', head: true }).eq('estado', 'respondida'),
