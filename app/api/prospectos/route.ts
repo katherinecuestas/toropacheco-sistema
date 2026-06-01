@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { Resend } from 'resend'
+import { TRIBUNALES } from '@/lib/tribunales'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+const resend = new Resend(process.env.RESEND_API_KEY)
+
+function findCorte(juzgado: string | null | undefined): string {
+  if (!juzgado) return '—'
+  return TRIBUNALES.find(g => g.tribunales.includes(juzgado))?.corte ?? juzgado
+}
 
 async function getAbogadoId(request: Request): Promise<number | null> {
   const token = request.headers.get('authorization')?.replace('Bearer ', '')
@@ -28,7 +36,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from('prospectos')
       .select('*, tipificaciones(id)')
-      .in('estado', ['interesado', 'agendado'])
+      .in('estado', ['interesado', 'agendado', 'cotizacion_enviada', 'acepto_cotizacion', 'venta'])
       .order('created_at', { ascending: false })
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
@@ -93,12 +101,107 @@ export async function PATCH(request: NextRequest) {
     const abogadoId = await getAbogadoId(request)
     if (!abogadoId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-    const { id } = await request.json()
+    const body = await request.json()
+    const { id, estado } = body
+
+    // Cambio de estado explícito
+    if (estado) {
+      const { error } = await supabaseAdmin
+        .from('prospectos')
+        .update({ estado })
+        .eq('id', id)
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+      // Evento timeline para cualquier cambio de estado
+      const { data: u } = await supabaseAdmin
+        .from('usuarios').select('nombres, nombre_negocio').eq('id', abogadoId).maybeSingle()
+      const nombreU = u?.nombres?.split(' ')[0] ?? u?.nombre_negocio?.split(' ')[0] ?? 'Branco'
+      const LABEL: Record<string, string> = {
+        cotizacion_enviada: 'Cotización enviada', acepto_cotizacion: 'Aceptó cotización', venta: 'Venta ✅',
+        interesado: 'Interesado', agendado: 'Agendado',
+      }
+      await supabaseAdmin.from('prospecto_timeline').insert({
+        prospecto_id: id, usuario_id: abogadoId,
+        evento: 'estado_cambiado',
+        descripcion: `${nombreU} cambió estado a "${LABEL[estado] ?? estado}"`,
+      })
+
+      // Flujo especial: conversión a cliente cuando estado === 'venta'
+      if (estado === 'venta') {
+        const { data: p } = await supabaseAdmin
+          .from('prospectos').select('*').eq('id', id).maybeSingle()
+        if (!p) return NextResponse.json({ success: true })
+
+        const now = new Date()
+        const corte = findCorte(p.juzgado)
+
+        // Insertar en ventas
+        await supabaseAdmin.from('ventas').insert({
+          prospecto_id: id,
+          supervisor_id: p.creado_por,
+          abogado_id: abogadoId,
+          region: corte,
+          tribunal: p.juzgado,
+          monto_deuda: p.monto_deuda,
+          mes: now.getMonth() + 1,
+          anio: now.getFullYear(),
+        })
+
+        // Crear usuario en Supabase Auth (solo si tiene email)
+        if (p.email) {
+          const PASSWORD = 'Bienvenido2026!'
+          const { data: authData } = await supabaseAdmin.auth.admin.createUser({
+            email: p.email, password: PASSWORD, email_confirm: true,
+          })
+          if (authData?.user) {
+            await supabaseAdmin.from('clientes').insert({
+              nombre: p.nombre, email: p.email,
+              telefono: p.telefono ?? null, rut: p.rut ?? null,
+              auth_user_id: authData.user.id,
+            })
+          }
+
+          // Email de bienvenida
+          await resend.emails.send({
+            from: 'Toro Pacheco & Asociados <notificaciones@toropachecoasociados.cl>',
+            to: p.email,
+            subject: 'Bienvenido a Toro Pacheco & Asociados',
+            text: [
+              `Estimado/a ${p.nombre},`,
+              '',
+              'Nos complace informarte que tu caso ha sido asignado a nuestro equipo.',
+              'Ya puedes acceder a tu portal de cliente en:',
+              '',
+              '  https://toropachecoasociados.cl/mi-cuenta',
+              '',
+              `  Email: ${p.email}`,
+              `  Contraseña temporal: Bienvenido2026!`,
+              '',
+              'Te recomendamos cambiar tu contraseña al ingresar por primera vez.',
+              '',
+              'Toro Pacheco & Asociados',
+            ].join('\n'),
+          })
+        }
+
+        // Notificar a Vladimir
+        await supabaseAdmin.from('notificaciones').insert({
+          usuario_id: p.creado_por,
+          tipo: 'venta',
+          titulo: `¡Venta! ${p.nombre}`,
+          mensaje: `${p.nombre} fue convertido a cliente. Tribunal: ${p.juzgado ?? '—'}`,
+          leida: false,
+        })
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
+    // Comportamiento original: marcar revisado
     const { error } = await supabaseAdmin
       .from('prospectos')
       .update({ revisado: true })
       .eq('id', id)
-
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     return NextResponse.json({ success: true })
   } catch {

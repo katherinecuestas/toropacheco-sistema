@@ -13,26 +13,32 @@ const azul = '#1F3A5F'
 const dorado = '#C7B88A'
 const azulProfundo = '#162B46'
 
-type Estado = 'sin_contacto' | 'no_contesta' | 'wsp_enviado' | 'interesado' | 'ya_tiene_abogado' | 'agendado'
+type Estado = 'sin_contacto' | 'no_contesta' | 'wsp_enviado' | 'interesado' | 'ya_tiene_abogado' | 'agendado' | 'cotizacion_enviada' | 'acepto_cotizacion' | 'venta'
 
 const ESTADOS: { value: Estado; label: string }[] = [
-  { value: 'sin_contacto',    label: 'Sin contacto' },
-  { value: 'no_contesta',     label: 'No contesta' },
-  { value: 'wsp_enviado',     label: 'WSP enviado' },
-  { value: 'interesado',      label: 'Interesado' },
-  { value: 'ya_tiene_abogado',label: 'Ya tiene abogado' },
-  { value: 'agendado',        label: 'Agendado' },
+  { value: 'sin_contacto',       label: 'Sin contacto' },
+  { value: 'no_contesta',        label: 'No contesta' },
+  { value: 'wsp_enviado',        label: 'WSP enviado' },
+  { value: 'interesado',         label: 'Interesado' },
+  { value: 'ya_tiene_abogado',   label: 'Ya tiene abogado' },
+  { value: 'agendado',           label: 'Agendado' },
+  { value: 'cotizacion_enviada', label: 'Cotización enviada' },
+  { value: 'acepto_cotizacion',  label: 'Aceptó cotización' },
+  { value: 'venta',              label: 'Venta ✅' },
 ]
 
 const ESTADO_LABEL: Record<Estado, string> = Object.fromEntries(ESTADOS.map(e => [e.value, e.label])) as Record<Estado, string>
 
 const ESTADO_COLOR: Record<Estado, { row: string; text: string; badge: string }> = {
-  sin_contacto:     { row: 'bg-gray-50',   text: 'text-gray-700',   badge: 'bg-gray-100 text-gray-600' },
-  no_contesta:      { row: 'bg-yellow-50', text: 'text-yellow-800', badge: 'bg-yellow-100 text-yellow-700' },
-  wsp_enviado:      { row: 'bg-yellow-50', text: 'text-yellow-800', badge: 'bg-yellow-200 text-yellow-800' },
-  interesado:       { row: 'bg-green-50',  text: 'text-green-800',  badge: 'bg-green-100 text-green-700' },
-  ya_tiene_abogado: { row: 'bg-red-50',    text: 'text-red-800',    badge: 'bg-red-100 text-red-700' },
-  agendado:         { row: 'bg-green-50',  text: 'text-green-900',  badge: 'bg-green-200 text-green-800' },
+  sin_contacto:       { row: 'bg-gray-50',   text: 'text-gray-700',   badge: 'bg-gray-100 text-gray-600' },
+  no_contesta:        { row: 'bg-yellow-50', text: 'text-yellow-800', badge: 'bg-yellow-100 text-yellow-700' },
+  wsp_enviado:        { row: 'bg-yellow-50', text: 'text-yellow-800', badge: 'bg-yellow-200 text-yellow-800' },
+  interesado:         { row: 'bg-green-50',  text: 'text-green-800',  badge: 'bg-green-100 text-green-700' },
+  ya_tiene_abogado:   { row: 'bg-red-50',    text: 'text-red-800',    badge: 'bg-red-100 text-red-700' },
+  agendado:           { row: 'bg-green-50',  text: 'text-green-900',  badge: 'bg-green-200 text-green-800' },
+  cotizacion_enviada: { row: 'bg-blue-50',   text: 'text-blue-800',   badge: 'bg-blue-100 text-blue-700' },
+  acepto_cotizacion:  { row: 'bg-blue-50',   text: 'text-blue-900',   badge: 'bg-blue-200 text-blue-900' },
+  venta:              { row: 'bg-emerald-50', text: 'text-emerald-900', badge: 'bg-emerald-600 text-white' },
 }
 
 const FORM_VACÍO = {
@@ -163,6 +169,9 @@ export default function SupervisorDashboardPage() {
   const [filtro, setFiltro] = useState<Estado | 'todos'>('todos')
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null)
 
+  const [ventasData, setVentasData] = useState<{ ventas: any[]; total: number; porRegion: Record<string,number> } | null>(null)
+  const [mostrarVentas, setMostrarVentas] = useState(false)
+
   const [tipificandoId, setTipificandoId] = useState<number | null>(null)
   const [tipMap, setTipMap] = useState<Record<number, any[]>>({})
   const [tipTipo, setTipTipo] = useState('')
@@ -194,7 +203,7 @@ export default function SupervisorDashboardPage() {
       const { data: u } = await supabase.from('usuarios').select('id, nombre_negocio, rol').eq('auth_user_id', session.user.id).maybeSingle()
       if (!u || u.rol !== 'supervisor') { router.push('/login'); return }
       setSupervisor(u)
-      await cargarProspectos(session.access_token)
+      await Promise.all([cargarProspectos(session.access_token), cargarVentas(session.access_token)])
       setLoading(false)
     }
     cargar()
@@ -204,6 +213,12 @@ export default function SupervisorDashboardPage() {
     const res = await fetch('/api/supervisor/prospectos', { headers: { authorization: `Bearer ${tk}` } })
     const data = await res.json()
     if (data.prospectos) setProspectos(data.prospectos)
+  }
+
+  async function cargarVentas(tk: string) {
+    const res = await fetch('/api/ventas', { headers: { authorization: `Bearer ${tk}` } })
+    const data = await res.json()
+    if (data.ventas !== undefined) setVentasData(data)
   }
 
   function mostrarMensaje(tipo: 'exito' | 'error', texto: string) {
@@ -476,6 +491,7 @@ export default function SupervisorDashboardPage() {
               { label: 'Interesados', n: conteo('interesado') },
               { label: 'Agendados', n: conteo('agendado') },
               { label: 'Sin contactar', n: conteo('sin_contacto') },
+              { label: 'Ventas mes', n: ventasData?.total ?? 0 },
             ].map(s => (
               <div key={s.label}>
                 <p className="text-xs opacity-50">{s.label}</p>
@@ -766,6 +782,66 @@ export default function SupervisorDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* MIS VENTAS */}
+        {(ventasData?.total ?? 0) > 0 && (
+          <div className="rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: '#6EE7B7' }}>
+            <button
+              onClick={() => setMostrarVentas(v => !v)}
+              className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors hover:bg-emerald-50"
+              style={{ backgroundColor: '#ECFDF5' }}>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">💰</span>
+                <div>
+                  <p className="text-sm font-bold text-emerald-800">Mis Ventas del Mes</p>
+                  <p className="text-xs text-emerald-600">{ventasData!.total} venta{ventasData!.total !== 1 ? 's' : ''} en {new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}</p>
+                </div>
+              </div>
+              <span className="text-emerald-600 font-medium text-sm">{mostrarVentas ? '▲ Ocultar' : '▼ Ver detalle'}</span>
+            </button>
+
+            {mostrarVentas && (
+              <div className="bg-white px-5 py-4 space-y-4">
+                {/* Desglose por región */}
+                {Object.keys(ventasData!.porRegion).length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold tracking-wide mb-2" style={{ color: azul }}>Por corte</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(ventasData!.porRegion).map(([region, n]) => (
+                        <span key={region} className="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-medium">
+                          {region} ({n})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Lista de ventas */}
+                <div className="space-y-2">
+                  <p className="text-xs font-bold tracking-wide" style={{ color: azul }}>Prospectos convertidos</p>
+                  {ventasData!.ventas.map((v: any) => (
+                    <div key={v.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5 text-sm">
+                      <div>
+                        <p className="font-semibold text-gray-900">{v.prospectos?.nombre ?? '—'}</p>
+                        <p className="text-xs text-gray-400">{v.tribunal ?? '—'}</p>
+                      </div>
+                      <div className="text-right">
+                        {v.monto_deuda && (
+                          <p className="text-xs font-medium text-gray-600">
+                            ${Number(v.monto_deuda).toLocaleString('es-CL')}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-400">
+                          {new Date(v.created_at).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

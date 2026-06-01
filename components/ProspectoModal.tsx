@@ -40,14 +40,23 @@ function tiempoRelativo(iso: string): string {
   return `Hace ${Math.floor(h / 24)}d`
 }
 
+const ESTADO_OPTIONS = [
+  { value: 'interesado',         label: 'Interesado' },
+  { value: 'agendado',           label: 'Agendado' },
+  { value: 'cotizacion_enviada', label: 'Cotización enviada' },
+  { value: 'acepto_cotizacion',  label: 'Aceptó cotización' },
+  { value: 'venta',              label: 'Venta ✅' },
+]
+
 interface Props {
   prospecto: any
   token: string
   onClose: () => void
   onTipificacionCreada?: () => void
+  onEstadoCambiado?: () => void
 }
 
-export function ProspectoModal({ prospecto: p, token, onClose, onTipificacionCreada }: Props) {
+export function ProspectoModal({ prospecto: p, token, onClose, onTipificacionCreada, onEstadoCambiado }: Props) {
   const [tipificaciones, setTipificaciones] = useState<any[]>([])
   const [timeline, setTimeline] = useState<any[]>([])
   const [tipo, setTipo] = useState('')
@@ -55,6 +64,11 @@ export function ProspectoModal({ prospecto: p, token, onClose, onTipificacionCre
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<'datos' | 'timeline'>('datos')
+  const [estadoActual, setEstadoActual] = useState(p.estado)
+  const [nuevoEstado, setNuevoEstado] = useState(p.estado)
+  const [cambiandoEstado, setCambiandoEstado] = useState(false)
+  const [mensajeEstado, setMensajeEstado] = useState('')
+  const [confirmarVenta, setConfirmarVenta] = useState(false)
 
   useEffect(() => {
     cargarDatos()
@@ -91,6 +105,30 @@ export function ProspectoModal({ prospecto: p, token, onClose, onTipificacionCre
       setError(data.error || 'Error al guardar.')
     }
     setGuardando(false)
+  }
+
+  async function handleCambiarEstado() {
+    if (nuevoEstado === estadoActual) return
+    if (nuevoEstado === 'venta' && !confirmarVenta) { setConfirmarVenta(true); return }
+    setCambiandoEstado(true)
+    setMensajeEstado('')
+    const res = await fetch('/api/prospectos', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id: p.id, estado: nuevoEstado }),
+    })
+    const data = await res.json()
+    if (data.success) {
+      setEstadoActual(nuevoEstado)
+      setConfirmarVenta(false)
+      setMensajeEstado(nuevoEstado === 'venta' ? '✅ ¡Venta registrada! Cliente creado y notificado.' : 'Estado actualizado.')
+      await cargarDatos()
+      onEstadoCambiado?.()
+      setTimeout(() => setMensajeEstado(''), 5000)
+    } else {
+      setMensajeEstado('Error: ' + (data.error ?? 'No se pudo actualizar.'))
+    }
+    setCambiandoEstado(false)
   }
 
   return (
@@ -146,6 +184,45 @@ export function ProspectoModal({ prospecto: p, token, onClose, onTipificacionCre
                     <p className="text-xs text-gray-400 mb-0.5">Observación</p>
                     <p className="text-sm text-gray-700">{p.observacion}</p>
                   </div>
+                )}
+              </div>
+
+              {/* Cambiar estado */}
+              <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: '#C7D2FE', backgroundColor: '#EEF2FF' }}>
+                <p className="text-xs font-bold tracking-wide" style={{ color: azul }}>CAMBIAR ESTADO</p>
+                {mensajeEstado && (
+                  <p className={`text-xs font-medium px-3 py-2 rounded-lg ${mensajeEstado.startsWith('Error') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
+                    {mensajeEstado}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2 items-center">
+                  <select
+                    value={nuevoEstado}
+                    onChange={e => { setNuevoEstado(e.target.value); setConfirmarVenta(false) }}
+                    className="flex-1 min-w-[180px] border border-indigo-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                  >
+                    {ESTADO_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleCambiarEstado}
+                    disabled={cambiandoEstado || nuevoEstado === estadoActual}
+                    className="px-4 py-1.5 rounded-lg text-xs font-bold disabled:opacity-40 text-white transition-colors"
+                    style={{ backgroundColor: nuevoEstado === 'venta' ? '#059669' : azul }}>
+                    {cambiandoEstado ? '...' : confirmarVenta ? '¿Confirmar venta?' : 'Actualizar'}
+                  </button>
+                  {confirmarVenta && (
+                    <button onClick={() => setConfirmarVenta(false)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+                {confirmarVenta && (
+                  <p className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
+                    ⚠️ Esto creará un cliente en el sistema y enviará email de bienvenida. ¿Confirmar?
+                  </p>
                 )}
               </div>
 

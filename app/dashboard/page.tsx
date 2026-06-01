@@ -1429,11 +1429,25 @@ export default function DashboardPage() {
             {prospectosData.length === 0 ? (
               <div className="bg-white rounded-2xl border p-12 text-center" style={{ borderColor: '#EDE8DC' }}>
                 <p className="text-3xl mb-3">⚖️</p>
-                <p className="text-sm text-gray-400">No hay prospectos interesados o agendados por el momento.</p>
+                <p className="text-sm text-gray-400">No hay prospectos en seguimiento por el momento.</p>
               </div>
             ) : (() => {
-              const nuevos      = prospectosData.filter(p => !p.tipificaciones || p.tipificaciones.length === 0)
-              const contactados = prospectosData.filter(p => p.tipificaciones && p.tipificaciones.length > 0)
+              const BADGE: Record<string, string> = {
+                interesado:         'bg-green-100 text-green-700',
+                agendado:           'bg-emerald-100 text-emerald-800',
+                cotizacion_enviada: 'bg-blue-100 text-blue-700',
+                acepto_cotizacion:  'bg-blue-200 text-blue-900',
+                venta:              'bg-emerald-600 text-white',
+              }
+              const LABEL: Record<string, string> = {
+                interesado: 'Interesado', agendado: 'Agendado',
+                cotizacion_enviada: 'Cotización enviada', acepto_cotizacion: 'Aceptó cotización',
+                venta: 'Venta ✅',
+              }
+              const vendidos    = prospectosData.filter(p => p.estado === 'venta')
+              const enProceso   = prospectosData.filter(p => ['cotizacion_enviada', 'acepto_cotizacion'].includes(p.estado))
+              const nuevos      = prospectosData.filter(p => !['venta','cotizacion_enviada','acepto_cotizacion'].includes(p.estado) && (!p.tipificaciones || p.tipificaciones.length === 0))
+              const contactados = prospectosData.filter(p => !['venta','cotizacion_enviada','acepto_cotizacion'].includes(p.estado) && p.tipificaciones?.length > 0)
 
               const ProspectoCard = ({ p }: { p: any }) => {
                 const noRevisado = p.revisado === false
@@ -1443,9 +1457,9 @@ export default function DashboardPage() {
                     onClick={() => { if (noRevisado) marcarRevisado(p.id); setProspectoSeleccionado(p) }}
                     className="p-4 border rounded-xl cursor-pointer transition-all hover:shadow-md"
                     style={{
-                      borderColor: noRevisado ? '#EF4444' : '#EDE8DC',
-                      backgroundColor: noRevisado ? '#FFF1F1' : '#FFFFFF',
-                      borderLeftWidth: noRevisado ? 4 : 1,
+                      borderColor: noRevisado ? '#EF4444' : p.estado === 'venta' ? '#059669' : '#EDE8DC',
+                      backgroundColor: noRevisado ? '#FFF1F1' : p.estado === 'venta' ? '#ECFDF5' : '#FFFFFF',
+                      borderLeftWidth: noRevisado || p.estado === 'venta' ? 4 : 1,
                     }}
                   >
                     <div className="flex justify-between items-start gap-2 mb-2">
@@ -1454,11 +1468,11 @@ export default function DashboardPage() {
                         <p className="font-semibold text-gray-800">{p.nombre}</p>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {!tieneContacto && (
+                        {!tieneContacto && p.estado !== 'venta' && (
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">Sin tipificar</span>
                         )}
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${p.estado === 'agendado' ? 'bg-emerald-100 text-emerald-800' : 'bg-green-100 text-green-700'}`}>
-                          {p.estado === 'interesado' ? 'Interesado' : 'Agendado'}
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BADGE[p.estado] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {LABEL[p.estado] ?? p.estado}
                         </span>
                       </div>
                     </div>
@@ -1497,6 +1511,28 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   )}
+                  {enProceso.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: azul }}>
+                        📝 En proceso de cierre
+                        <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{enProceso.length}</span>
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {enProceso.map(p => <ProspectoCard key={p.id} p={p} />)}
+                      </div>
+                    </div>
+                  )}
+                  {vendidos.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-bold mb-3 flex items-center gap-2" style={{ color: '#059669' }}>
+                        💰 Ventas
+                        <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">{vendidos.length}</span>
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {vendidos.map(p => <ProspectoCard key={p.id} p={p} />)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })()}
@@ -1512,6 +1548,7 @@ export default function DashboardPage() {
           token={sesionToken}
           onClose={() => setProspectoSeleccionado(null)}
           onTipificacionCreada={() => cargarCantidadProspectos(sesionToken)}
+          onEstadoCambiado={() => cargarCantidadProspectos(sesionToken)}
         />
       )}
 

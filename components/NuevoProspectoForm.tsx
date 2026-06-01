@@ -7,15 +7,18 @@ import { TRIBUNALES } from '@/lib/tribunales'
 const azul = '#1F3A5F'
 const dorado = '#C7B88A'
 
-type Estado = 'sin_contacto' | 'no_contesta' | 'wsp_enviado' | 'interesado' | 'ya_tiene_abogado' | 'agendado'
+type Estado = 'sin_contacto' | 'no_contesta' | 'wsp_enviado' | 'interesado' | 'ya_tiene_abogado' | 'agendado' | 'cotizacion_enviada' | 'acepto_cotizacion' | 'venta'
 
 const ESTADOS: { value: Estado; label: string }[] = [
-  { value: 'sin_contacto',     label: 'Sin contacto' },
-  { value: 'no_contesta',      label: 'No contesta' },
-  { value: 'wsp_enviado',      label: 'WSP enviado' },
-  { value: 'interesado',       label: 'Interesado' },
-  { value: 'ya_tiene_abogado', label: 'Ya tiene abogado' },
-  { value: 'agendado',         label: 'Agendado' },
+  { value: 'sin_contacto',       label: 'Sin contacto' },
+  { value: 'no_contesta',        label: 'No contesta' },
+  { value: 'wsp_enviado',        label: 'WSP enviado' },
+  { value: 'interesado',         label: 'Interesado' },
+  { value: 'ya_tiene_abogado',   label: 'Ya tiene abogado' },
+  { value: 'agendado',           label: 'Agendado' },
+  { value: 'cotizacion_enviada', label: 'Cotización enviada' },
+  { value: 'acepto_cotizacion',  label: 'Aceptó cotización' },
+  { value: 'venta',              label: 'Venta ✅' },
 ]
 
 const FORM_VACÍO = {
