@@ -1,8 +1,13 @@
 import { Resend } from 'resend'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = 'Toro Pacheco & Asociados <no-reply@toropachecoasociados.cl>'
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,6 +65,25 @@ export async function POST(request: NextRequest) {
         `,
       }),
     ]).catch((err) => console.error('[confirmar-consulta] Error enviando emails:', err))
+
+    // Registrar prospecto web e insertar notificación para Branco
+    await Promise.all([
+      supabaseAdmin.from('prospectos').insert({
+        nombre: nombreCliente,
+        email: emailCliente,
+        telefono: telefonoCliente ?? null,
+        estado: 'interesado',
+        observacion: `Consulta web: ${asunto}`,
+        creado_por: null,
+      }),
+      supabaseAdmin.from('notificaciones').insert({
+        usuario_id: 2,
+        tipo: 'prospecto',
+        titulo: `Nueva consulta web — ${nombreCliente}`,
+        mensaje: `Asunto: ${asunto} | Email: ${emailCliente} | Tel: ${telefonoCliente ?? '—'}`,
+        leida: false,
+      }),
+    ]).catch((err) => console.error('[confirmar-consulta] Error insertando prospecto/notificación:', err))
 
     return NextResponse.json({ success: true })
 

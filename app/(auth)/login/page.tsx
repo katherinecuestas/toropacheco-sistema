@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -33,8 +33,18 @@ function LoginForm() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setError('Error al obtener sesión.'); setLoading(false); return }
 
-    const { data: abogado } = await supabase.from('usuarios').select('id').eq('auth_user_id', user.id).maybeSingle()
-    if (abogado) { router.push('/dashboard'); return }
+    const { data: usuario } = await supabase.from('usuarios').select('id, rol, estado').eq('auth_user_id', user.id).maybeSingle()
+    if (usuario) {
+      if (usuario.estado === false) {
+        await supabase.auth.signOut()
+        setError('Tu cuenta está deshabilitada. Contacta al administrador.')
+        setLoading(false)
+        return
+      }
+      if (usuario.rol === 'supervisor') { router.push('/supervisor/dashboard'); return }
+      router.push('/dashboard')
+      return
+    }
 
     const { data: admin } = await supabase.from('admins').select('id').eq('auth_user_id', user.id).maybeSingle()
     if (admin) { router.push('/admin'); return }
@@ -46,12 +56,10 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: '#FDFBF5', fontFamily: 'var(--font-inter), sans-serif' }}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold mx-auto mb-3"
-            style={{ backgroundColor: azul }}>⚖</div>
+          <img src="/logo_azul.png" alt="Toro Pacheco & Asociados" className="h-16 w-auto mx-auto mb-4" />
           <h1 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-playfair), serif', color: azul }}>
             Iniciar sesión
           </h1>
-          <p className="text-sm mt-1" style={{ color: '#9CA3AF' }}>Toro Pacheco & Asociados</p>
         </div>
 
         <div className="rounded-2xl shadow-sm border p-8" style={{ backgroundColor: 'white', borderColor: '#EDE8DC' }}>
@@ -88,6 +96,9 @@ function LoginForm() {
             <p className="text-sm" style={{ color: '#9CA3AF' }}>
               ¿Eres cliente nuevo?{' '}
               <a href="/registro-cliente" className="font-semibold" style={{ color: azul }}>Crear cuenta</a>
+            </p>
+            <p className="text-sm">
+              <a href="/" className="hover:opacity-70 transition-opacity" style={{ color: '#9CA3AF' }}>← Volver al sitio</a>
             </p>
           </div>
         </div>
