@@ -84,17 +84,18 @@ const ROL_RE   = /^[A-Z]-\d{1,6}-\d{4}$/
 
 function redondear10k(n: number) { return Math.round(n / 10000) * 10000 }
 
-function calcularPresupuesto(montoDeuda: number) {
+function calcularPresupuesto(montoDeuda: number, esFogape: boolean) {
   const PIE = 240000
-  let presupuesto = montoDeuda * 0.05
-  if (presupuesto < 700000) presupuesto = 640000
+  let presupuesto = montoDeuda * (esFogape ? 0.10 : 0.05)
+  if (presupuesto < 640000) presupuesto = 640000
   presupuesto = redondear10k(presupuesto)
   const saldo = presupuesto - PIE
   let nCuotas = Math.round(saldo / 80000)
   if (nCuotas < 1) nCuotas = 1
+  if (nCuotas > 24) nCuotas = 24
   let montoCuota = redondear10k(saldo / nCuotas)
   if (montoCuota < 70000) { nCuotas = Math.max(1, nCuotas - 1); montoCuota = redondear10k(saldo / nCuotas) }
-  if (montoCuota > 90000) { nCuotas++; montoCuota = redondear10k(saldo / nCuotas) }
+  if (montoCuota > 90000) { nCuotas = Math.min(24, nCuotas + 1); montoCuota = redondear10k(saldo / nCuotas) }
   return { presupuesto, pie: PIE, saldo, nCuotas, montoCuota }
 }
 
@@ -116,6 +117,7 @@ export function NuevoProspectoForm({ token, onSuccess, onCancel }: NuevoProspect
   const [anioRol, setAnioRol] = useState(String(new Date().getFullYear()))
   const [editandoAnio, setEditandoAnio] = useState(false)
   const [telefonoDigitos, setTelefonoDigitos] = useState('')
+  const [fogape, setFogape] = useState(false)
   const [errores, setErrores] = useState<Record<string, string>>({})
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
@@ -125,8 +127,8 @@ export function NuevoProspectoForm({ token, onSuccess, onCancel }: NuevoProspect
   const presupuestoCalc = useMemo(() => {
     const monto = Number(form.monto_deuda)
     if (!monto || monto <= 0) return null
-    return calcularPresupuesto(monto)
-  }, [form.monto_deuda])
+    return calcularPresupuesto(monto, fogape)
+  }, [form.monto_deuda, fogape])
 
   async function handleGuardar(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -327,6 +329,15 @@ export function NuevoProspectoForm({ token, onSuccess, onCancel }: NuevoProspect
               }}
               placeholder="Ej: 5.000.000" className={inputCls}
             />
+            <label className="flex items-center gap-2 mt-2 cursor-pointer select-none w-fit">
+              <input
+                type="checkbox"
+                checked={fogape}
+                onChange={e => setFogape(e.target.checked)}
+                className="w-4 h-4 accent-blue-600 cursor-pointer"
+              />
+              <span className="text-xs font-semibold" style={{ color: azul }}>¿Es crédito FOGAPE?</span>
+            </label>
             {presupuestoCalc && (
               <div className="mt-2 rounded-xl border p-3 space-y-2" style={{ backgroundColor: '#F0F4FF', borderColor: '#C7D2FE' }}>
                 <p className="text-xs font-bold tracking-wide" style={{ color: azul }}>💡 PRESUPUESTO ESTIMADO</p>

@@ -7,6 +7,7 @@ const supabaseAdmin = createClient(
 )
 
 export const TIPO_LABEL: Record<string, string> = {
+  venta:                   '💰 Venta',
   contesto_interesado:     '✅ Contestó — Interesado',
   contesto_agendado:       '📅 Contestó — Agendado',
   contesto_lo_va_pensar:   '🤔 Contestó — Lo va a pensar',

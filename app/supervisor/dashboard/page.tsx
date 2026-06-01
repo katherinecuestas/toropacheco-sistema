@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo, useRef } from 'react'
+import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { TRIBUNALES } from '@/lib/tribunales'
 import { supabase } from '@/lib/supabase'
@@ -69,18 +69,18 @@ function formatearRUT(raw: string): string {
 
 function redondear10k(n: number) { return Math.round(n / 10000) * 10000 }
 
-function calcularPresupuesto(montoDeuda: number) {
+function calcularPresupuesto(montoDeuda: number, esFogape: boolean) {
   const PIE = 240000
-  let presupuesto = montoDeuda * 0.05
-  if (presupuesto < 700000) presupuesto = 640000
+  let presupuesto = montoDeuda * (esFogape ? 0.10 : 0.05)
+  if (presupuesto < 640000) presupuesto = 640000
   presupuesto = redondear10k(presupuesto)
   const saldo = presupuesto - PIE
-  // Cuotas entre 70k y 90k, redondeadas a 10k
   let nCuotas = Math.round(saldo / 80000)
   if (nCuotas < 1) nCuotas = 1
+  if (nCuotas > 24) nCuotas = 24
   let montoCuota = redondear10k(saldo / nCuotas)
   if (montoCuota < 70000) { nCuotas = Math.max(1, nCuotas - 1); montoCuota = redondear10k(saldo / nCuotas) }
-  if (montoCuota > 90000) { nCuotas++; montoCuota = redondear10k(saldo / nCuotas) }
+  if (montoCuota > 90000) { nCuotas = Math.min(24, nCuotas + 1); montoCuota = redondear10k(saldo / nCuotas) }
   return { presupuesto, pie: PIE, saldo, nCuotas, montoCuota }
 }
 
@@ -179,6 +179,7 @@ export default function SupervisorDashboardPage() {
   const [anioRol, setAnioRol] = useState(String(new Date().getFullYear()))
   const [editandoAnio, setEditandoAnio] = useState(false)
   const [telefonoDigitos, setTelefonoDigitos] = useState('')
+  const [fogape, setFogape] = useState(false)
   const [notificaciones, setNotificaciones] = useState<any[]>([])
   const [dropdownNoti, setDropdownNoti] = useState(false)
   const notiRef = useRef<HTMLDivElement>(null)
@@ -223,7 +224,7 @@ export default function SupervisorDashboardPage() {
     const data = await res.json()
     if (data.success || data.prospecto) {
       setForm(FORM_VACÍO); setEditando(null); setMostrarForm(false); setErroresForm({})
-      setRolNumero(''); setAnioRol(String(new Date().getFullYear())); setEditandoAnio(false); setTelefonoDigitos('')
+      setRolNumero(''); setAnioRol(String(new Date().getFullYear())); setEditandoAnio(false); setTelefonoDigitos(''); setFogape(false)
       await cargarProspectos(token)
       mostrarMensaje('exito', editando ? 'Prospecto actualizado.' : 'Prospecto guardado.')
     } else {
@@ -378,8 +379,8 @@ export default function SupervisorDashboardPage() {
   const presupuestoCalc = useMemo(() => {
     const monto = Number(form.monto_deuda)
     if (!monto || monto <= 0) return null
-    return calcularPresupuesto(monto)
-  }, [form.monto_deuda])
+    return calcularPresupuesto(monto, fogape)
+  }, [form.monto_deuda, fogape])
 
   const filtrados = filtro === 'todos' ? prospectos : prospectos.filter(p => p.estado === filtro)
   const conteo = (v: Estado) => prospectos.filter(p => p.estado === v).length
@@ -690,6 +691,15 @@ export default function SupervisorDashboardPage() {
                     placeholder="Ej: 5.000.000"
                     className={inputCls}
                   />
+                  <label className="flex items-center gap-2 mt-2 cursor-pointer select-none w-fit">
+                    <input
+                      type="checkbox"
+                      checked={fogape}
+                      onChange={e => setFogape(e.target.checked)}
+                      className="w-4 h-4 accent-blue-600 cursor-pointer"
+                    />
+                    <span className="text-xs font-semibold" style={{ color: azul }}>¿Es crédito FOGAPE?</span>
+                  </label>
 
                   {/* Calculador automático */}
                   {presupuestoCalc && (
@@ -804,8 +814,8 @@ export default function SupervisorDashboardPage() {
                   {filtrados.map(p => {
                     const col = ESTADO_COLOR[p.estado as Estado] ?? ESTADO_COLOR.sin_contacto
                     return (
-                      <>
-                      <tr key={p.id} className={`border-b last:border-0 ${col.row}`} style={{ borderColor: '#F3F4F6' }}>
+                      <React.Fragment key={p.id}>
+                      <tr className={`border-b last:border-0 ${col.row}`} style={{ borderColor: '#F3F4F6' }}>
                         <td className="px-4 py-3">
                           <p className={`font-semibold ${col.text}`}>{p.nombre}</p>
                           {p.rut && <p className="text-xs text-gray-400">RUT: {p.rut}</p>}
@@ -894,7 +904,7 @@ export default function SupervisorDashboardPage() {
                           </td>
                         </tr>
                       )}
-                      </>
+                      </React.Fragment>
                     )
                   })}
                 </tbody>

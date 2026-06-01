@@ -6,6 +6,7 @@ const azul = '#1F3A5F'
 const dorado = '#C7B88A'
 
 export const TIPO_LABEL: Record<string, string> = {
+  venta:                 '💰 Venta',
   contesto_interesado:   '✅ Contestó — Interesado',
   contesto_agendado:     '📅 Contestó — Agendado',
   contesto_lo_va_pensar: '🤔 Contestó — Lo va a pensar',
