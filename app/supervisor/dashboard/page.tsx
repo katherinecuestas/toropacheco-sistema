@@ -167,6 +167,9 @@ export default function SupervisorDashboardPage() {
   const [editando, setEditando] = useState<any | null>(null)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [filtro, setFiltro] = useState<Estado | 'todos'>('todos')
+  const [filtroFecha, setFiltroFecha] = useState('')
+  const [filtroJuzgado, setFiltroJuzgado] = useState('')
+  const [filtroMonto, setFiltroMonto] = useState('')
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null)
 
   const [ventasData, setVentasData] = useState<{ ventas: any[]; total: number; porRegion: Record<string,number> } | null>(null)
@@ -397,7 +400,22 @@ export default function SupervisorDashboardPage() {
     return calcularPresupuesto(monto, fogape)
   }, [form.monto_deuda, fogape])
 
-  const filtrados = filtro === 'todos' ? prospectos : prospectos.filter(p => p.estado === filtro)
+  const juzgadosUnicos = [...new Set(prospectos.map(p => p.juzgado).filter(Boolean))].sort() as string[]
+  const mesesUnicos = [...new Set(prospectos.map(p => p.fecha_requerimiento?.slice(0, 7)).filter(Boolean))].sort() as string[]
+  const filtrados = useMemo(() => {
+    let list = filtro === 'todos' ? prospectos : prospectos.filter(p => p.estado === filtro)
+    if (filtroFecha) list = list.filter(p => p.fecha_requerimiento?.slice(0, 7) === filtroFecha)
+    if (filtroJuzgado) list = list.filter(p => p.juzgado === filtroJuzgado)
+    if (filtroMonto) list = list.filter(p => {
+      const m = Number(p.monto_deuda) || 0
+      if (filtroMonto === 'menos1m') return m < 1_000_000
+      if (filtroMonto === '1m5m') return m >= 1_000_000 && m < 5_000_000
+      if (filtroMonto === '5m20m') return m >= 5_000_000 && m < 20_000_000
+      if (filtroMonto === 'mas20m') return m >= 20_000_000
+      return true
+    })
+    return list
+  }, [filtro, filtroFecha, filtroJuzgado, filtroMonto, prospectos])
   const conteo = (v: Estado) => prospectos.filter(p => p.estado === v).length
 
   const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400'
@@ -846,19 +864,40 @@ export default function SupervisorDashboardPage() {
         )}
 
         {/* FILTROS */}
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => setFiltro('todos')}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${filtro === 'todos' ? 'text-white border-transparent' : 'bg-white border-gray-200 text-gray-600'}`}
-            style={filtro === 'todos' ? { backgroundColor: azul } : {}}>
-            Todos ({prospectos.length})
-          </button>
-          {ESTADOS.map(e => (
-            <button key={e.value} onClick={() => setFiltro(e.value)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${filtro === e.value ? 'text-white border-transparent' : 'bg-white border-gray-200 text-gray-600'}`}
-              style={filtro === e.value ? { backgroundColor: azul } : {}}>
-              {e.label} ({conteo(e.value)})
+        <div className="flex flex-wrap gap-3 items-center">
+          <select value={filtro} onChange={e => setFiltro(e.target.value as Estado | 'todos')}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="todos">Todos los estados ({prospectos.length})</option>
+            {ESTADOS.map(e => <option key={e.value} value={e.value}>{e.label} ({conteo(e.value)})</option>)}
+          </select>
+          <select value={filtroFecha} onChange={e => setFiltroFecha(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="">Cualquier fecha</option>
+            {mesesUnicos.map(m => {
+              const [y, mo] = m.split('-')
+              const label = new Date(Number(y), Number(mo) - 1, 1).toLocaleDateString('es-CL', { month: 'short', year: 'numeric' })
+              return <option key={m} value={m}>{label}</option>
+            })}
+          </select>
+          <select value={filtroJuzgado} onChange={e => setFiltroJuzgado(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="">Cualquier juzgado</option>
+            {juzgadosUnicos.map(j => <option key={j} value={j}>{j}</option>)}
+          </select>
+          <select value={filtroMonto} onChange={e => setFiltroMonto(e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="">Cualquier monto</option>
+            <option value="menos1m">Menos de $1M</option>
+            <option value="1m5m">$1M – $5M</option>
+            <option value="5m20m">$5M – $20M</option>
+            <option value="mas20m">Más de $20M</option>
+          </select>
+          {(filtro !== 'todos' || filtroFecha || filtroJuzgado || filtroMonto) && (
+            <button onClick={() => { setFiltro('todos'); setFiltroFecha(''); setFiltroJuzgado(''); setFiltroMonto('') }}
+              className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg bg-white transition-colors">
+              ✕ Limpiar
             </button>
-          ))}
+          )}
         </div>
 
         {/* TABLA */}
@@ -866,7 +905,9 @@ export default function SupervisorDashboardPage() {
           <div className="bg-white rounded-2xl border p-12 text-center" style={{ borderColor: '#EDE8DC' }}>
             <p className="text-3xl mb-3">📋</p>
             <p className="text-sm" style={{ color: '#9CA3AF' }}>
-              {filtro === 'todos' ? 'No hay prospectos cargados aún.' : `Sin prospectos con estado "${ESTADO_LABEL[filtro as Estado]}".`}
+              {filtro === 'todos' && !filtroFecha && !filtroJuzgado && !filtroMonto
+                ? 'No hay prospectos cargados aún.'
+                : 'Ningún prospecto coincide con los filtros seleccionados.'}
             </p>
           </div>
         ) : (

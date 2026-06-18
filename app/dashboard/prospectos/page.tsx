@@ -46,6 +46,10 @@ export default function ProspectosPage() {
   const [prospectos, setProspectos] = useState<any[]>([])
   const [abogado, setAbogado] = useState<any>(null)
   const [token, setToken] = useState('')
+  const [filtroEstado, setFiltroEstado] = useState('')
+  const [filtroFecha, setFiltroFecha] = useState('')
+  const [filtroJuzgado, setFiltroJuzgado] = useState('')
+  const [filtroMonto, setFiltroMonto] = useState('')
 
   useEffect(() => {
     async function cargar() {
@@ -80,6 +84,23 @@ export default function ProspectosPage() {
 
   const interesados = prospectos.filter(p => p.estado === 'interesado').length
   const agendados   = prospectos.filter(p => p.estado === 'agendado').length
+
+  const juzgadosUnicos = [...new Set(prospectos.map(p => p.juzgado).filter(Boolean))].sort() as string[]
+  const mesesUnicos = [...new Set(prospectos.map(p => p.fecha_requerimiento?.slice(0, 7)).filter(Boolean))].sort() as string[]
+  const filtrados = (() => {
+    let list = filtroEstado ? prospectos.filter(p => p.estado === filtroEstado) : prospectos
+    if (filtroFecha) list = list.filter(p => p.fecha_requerimiento?.slice(0, 7) === filtroFecha)
+    if (filtroJuzgado) list = list.filter(p => p.juzgado === filtroJuzgado)
+    if (filtroMonto) list = list.filter(p => {
+      const m = Number(p.monto_deuda) || 0
+      if (filtroMonto === 'menos1m') return m < 1_000_000
+      if (filtroMonto === '1m5m') return m >= 1_000_000 && m < 5_000_000
+      if (filtroMonto === '5m20m') return m >= 5_000_000 && m < 20_000_000
+      if (filtroMonto === 'mas20m') return m >= 20_000_000
+      return true
+    })
+    return list
+  })()
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F5F7FA', fontFamily: 'var(--font-inter), sans-serif' }}>
@@ -127,10 +148,57 @@ export default function ProspectosPage() {
           </div>
         </div>
 
-        {prospectos.length === 0 ? (
+        {/* FILTROS */}
+        {prospectos.length > 0 && (
+          <div className="flex flex-wrap gap-3 items-center bg-white rounded-2xl border px-4 py-3" style={{ borderColor: '#EDE8DC' }}>
+            <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="">Todos los estados</option>
+              <option value="interesado">Interesado</option>
+              <option value="agendado">Agendado</option>
+              <option value="cotizacion_enviada">Cotización enviada</option>
+              <option value="acepto_cotizacion">Aceptó cotización</option>
+              <option value="venta">Venta ✅</option>
+            </select>
+            <select value={filtroFecha} onChange={e => setFiltroFecha(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="">Cualquier fecha</option>
+              {mesesUnicos.map(m => {
+                const [y, mo] = m.split('-')
+                const label = new Date(Number(y), Number(mo) - 1, 1).toLocaleDateString('es-CL', { month: 'short', year: 'numeric' })
+                return <option key={m} value={m}>{label}</option>
+              })}
+            </select>
+            <select value={filtroJuzgado} onChange={e => setFiltroJuzgado(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="">Cualquier juzgado</option>
+              {juzgadosUnicos.map(j => <option key={j} value={j}>{j}</option>)}
+            </select>
+            <select value={filtroMonto} onChange={e => setFiltroMonto(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="">Cualquier monto</option>
+              <option value="menos1m">Menos de $1M</option>
+              <option value="1m5m">$1M – $5M</option>
+              <option value="5m20m">$5M – $20M</option>
+              <option value="mas20m">Más de $20M</option>
+            </select>
+            {(filtroEstado || filtroFecha || filtroJuzgado || filtroMonto) && (
+              <button onClick={() => { setFiltroEstado(''); setFiltroFecha(''); setFiltroJuzgado(''); setFiltroMonto('') }}
+                className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg bg-white transition-colors">
+                ✕ Limpiar
+              </button>
+            )}
+          </div>
+        )}
+
+        {filtrados.length === 0 ? (
           <div className="bg-white rounded-2xl border p-12 text-center" style={{ borderColor: '#EDE8DC' }}>
             <p className="text-3xl mb-3">📋</p>
-            <p className="text-sm text-gray-400">No hay prospectos interesados o agendados por el momento.</p>
+            <p className="text-sm text-gray-400">
+              {prospectos.length === 0
+                ? 'No hay prospectos interesados o agendados por el momento.'
+                : 'Ningún prospecto coincide con los filtros seleccionados.'}
+            </p>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border overflow-hidden shadow-sm" style={{ borderColor: '#EDE8DC' }}>
@@ -153,7 +221,7 @@ export default function ProspectosPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {prospectos.map(p => (
+                  {filtrados.map(p => (
                     <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors"
                       style={{ borderColor: '#F3F4F6' }}>
                       <td className="px-4 py-3">
@@ -169,7 +237,7 @@ export default function ProspectosPage() {
                       <td className="px-4 py-3 text-sm text-gray-600">{p.telefono || '—'}</td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${ESTADO_BADGE[p.estado as Estado] ?? 'bg-gray-100 text-gray-600'}`}>
-                          {p.estado === 'interesado' ? 'Interesado' : 'Agendado'}
+                          {p.estado === 'interesado' ? 'Interesado' : p.estado === 'agendado' ? 'Agendado' : p.estado === 'cotizacion_enviada' ? 'Cotización enviada' : p.estado === 'acepto_cotizacion' ? 'Aceptó cotización' : 'Venta ✅'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{fmtFecha(p.fecha_llamar)}</td>
@@ -184,7 +252,7 @@ export default function ProspectosPage() {
 
             {/* Cards mobile */}
             <div className="lg:hidden divide-y" style={{ borderColor: '#F3F4F6' }}>
-              {prospectos.map(p => (
+              {filtrados.map(p => (
                 <div key={p.id} className="p-4 space-y-2">
                   <div className="flex justify-between items-start gap-2">
                     <div>
@@ -192,7 +260,7 @@ export default function ProspectosPage() {
                       {p.rut && <p className="text-xs text-gray-400">RUT: {p.rut}</p>}
                     </div>
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${ESTADO_BADGE[p.estado as Estado] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {p.estado === 'interesado' ? 'Interesado' : 'Agendado'}
+                      {p.estado === 'interesado' ? 'Interesado' : p.estado === 'agendado' ? 'Agendado' : p.estado === 'cotizacion_enviada' ? 'Cotización enviada' : p.estado === 'acepto_cotizacion' ? 'Aceptó cotización' : 'Venta ✅'}
                     </span>
                   </div>
                   <div className="text-xs text-gray-500 space-y-0.5">

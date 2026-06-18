@@ -99,6 +99,10 @@ export default function DashboardPage() {
   const notiRef = useRef<HTMLDivElement>(null)
   const [cantidadProspectos, setCantidadProspectos] = useState(0)
   const [prospectosData, setProspectosData] = useState<any[]>([])
+  const [filtroEstadoP, setFiltroEstadoP] = useState('')
+  const [filtroFechaP, setFiltroFechaP] = useState('')
+  const [filtroJuzgadoP, setFiltroJuzgadoP] = useState('')
+  const [filtroMontoP, setFiltroMontoP] = useState('')
   const [mostrarFormProspecto, setMostrarFormProspecto] = useState(false)
   const [prospectoSeleccionado, setProspectoSeleccionado] = useState<any | null>(null)
   const prospectosSectionRef = useRef<HTMLDivElement>(null)
@@ -1426,6 +1430,51 @@ export default function DashboardPage() {
               />
             )}
 
+            {/* Filtros de prospectos */}
+            {prospectosData.length > 0 && (
+              <div className="flex flex-wrap gap-3 items-center bg-white rounded-2xl border px-4 py-3" style={{ borderColor: '#EDE8DC' }}>
+                <select value={filtroEstadoP} onChange={e => setFiltroEstadoP(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  <option value="">Todos los estados</option>
+                  <option value="interesado">Interesado</option>
+                  <option value="agendado">Agendado</option>
+                  <option value="cotizacion_enviada">Cotización enviada</option>
+                  <option value="acepto_cotizacion">Aceptó cotización</option>
+                  <option value="venta">Venta ✅</option>
+                </select>
+                <select value={filtroFechaP} onChange={e => setFiltroFechaP(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  <option value="">Cualquier fecha</option>
+                  {[...new Set(prospectosData.map(p => p.fecha_requerimiento?.slice(0, 7)).filter(Boolean))].sort().map((m: any) => {
+                    const [y, mo] = (m as string).split('-')
+                    const label = new Date(Number(y), Number(mo) - 1, 1).toLocaleDateString('es-CL', { month: 'short', year: 'numeric' })
+                    return <option key={m} value={m}>{label}</option>
+                  })}
+                </select>
+                <select value={filtroJuzgadoP} onChange={e => setFiltroJuzgadoP(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  <option value="">Cualquier juzgado</option>
+                  {[...new Set(prospectosData.map(p => p.juzgado).filter(Boolean))].sort().map((j: any) => (
+                    <option key={j} value={j}>{j}</option>
+                  ))}
+                </select>
+                <select value={filtroMontoP} onChange={e => setFiltroMontoP(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-400">
+                  <option value="">Cualquier monto</option>
+                  <option value="menos1m">Menos de $1M</option>
+                  <option value="1m5m">$1M – $5M</option>
+                  <option value="5m20m">$5M – $20M</option>
+                  <option value="mas20m">Más de $20M</option>
+                </select>
+                {(filtroEstadoP || filtroFechaP || filtroJuzgadoP || filtroMontoP) && (
+                  <button onClick={() => { setFiltroEstadoP(''); setFiltroFechaP(''); setFiltroJuzgadoP(''); setFiltroMontoP('') }}
+                    className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg bg-white transition-colors">
+                    ✕ Limpiar
+                  </button>
+                )}
+              </div>
+            )}
+
             {prospectosData.length === 0 ? (
               <div className="bg-white rounded-2xl border p-12 text-center" style={{ borderColor: '#EDE8DC' }}>
                 <p className="text-3xl mb-3">⚖️</p>
@@ -1444,10 +1493,31 @@ export default function DashboardPage() {
                 cotizacion_enviada: 'Cotización enviada', acepto_cotizacion: 'Aceptó cotización',
                 venta: 'Venta ✅',
               }
-              const vendidos    = prospectosData.filter(p => p.estado === 'venta')
-              const enProceso   = prospectosData.filter(p => ['cotizacion_enviada', 'acepto_cotizacion'].includes(p.estado))
-              const nuevos      = prospectosData.filter(p => !['venta','cotizacion_enviada','acepto_cotizacion'].includes(p.estado) && (!p.tipificaciones || p.tipificaciones.length === 0))
-              const contactados = prospectosData.filter(p => !['venta','cotizacion_enviada','acepto_cotizacion'].includes(p.estado) && p.tipificaciones?.length > 0)
+              const filtradosP = (() => {
+                let list = prospectosData
+                if (filtroEstadoP) list = list.filter(p => p.estado === filtroEstadoP)
+                if (filtroFechaP) list = list.filter(p => p.fecha_requerimiento?.slice(0, 7) === filtroFechaP)
+                if (filtroJuzgadoP) list = list.filter(p => p.juzgado === filtroJuzgadoP)
+                if (filtroMontoP) list = list.filter(p => {
+                  const m = Number(p.monto_deuda) || 0
+                  if (filtroMontoP === 'menos1m') return m < 1_000_000
+                  if (filtroMontoP === '1m5m') return m >= 1_000_000 && m < 5_000_000
+                  if (filtroMontoP === '5m20m') return m >= 5_000_000 && m < 20_000_000
+                  if (filtroMontoP === 'mas20m') return m >= 20_000_000
+                  return true
+                })
+                return list
+              })()
+              if (filtradosP.length === 0) return (
+                <div className="bg-white rounded-2xl border p-12 text-center" style={{ borderColor: '#EDE8DC' }}>
+                  <p className="text-3xl mb-3">🔍</p>
+                  <p className="text-sm text-gray-400">Ningún prospecto coincide con los filtros seleccionados.</p>
+                </div>
+              )
+              const vendidos    = filtradosP.filter(p => p.estado === 'venta')
+              const enProceso   = filtradosP.filter(p => ['cotizacion_enviada', 'acepto_cotizacion'].includes(p.estado))
+              const nuevos      = filtradosP.filter(p => !['venta','cotizacion_enviada','acepto_cotizacion'].includes(p.estado) && (!p.tipificaciones || p.tipificaciones.length === 0))
+              const contactados = filtradosP.filter(p => !['venta','cotizacion_enviada','acepto_cotizacion'].includes(p.estado) && p.tipificaciones?.length > 0)
 
               const ProspectoCard = ({ p }: { p: any }) => {
                 const noRevisado = p.revisado === false
