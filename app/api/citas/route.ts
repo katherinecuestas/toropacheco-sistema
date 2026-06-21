@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { requireAbogado } from '@/lib/api-auth'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 // GET → listar citas del abogado (bypasea RLS)
@@ -24,8 +21,11 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ citas: data })
 }
 
-// PATCH → confirmar cita y enviar email al cliente
+// PATCH → confirmar cita y enviar email al cliente (solo abogados)
 export async function PATCH(request: NextRequest) {
+  const { error: authErr } = await requireAbogado(request)
+  if (authErr) return authErr
+
   try {
     const { id, action } = await request.json()
     if (action !== 'confirmar') return NextResponse.json({ success: false, error: 'Acción desconocida' }, { status: 400 })
@@ -79,8 +79,11 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// PUT → editar cita (fecha, notas, estado, meeting_url)
+// PUT → editar cita (fecha, notas, estado, meeting_url) (solo abogados)
 export async function PUT(request: NextRequest) {
+  const { error: authErr } = await requireAbogado(request)
+  if (authErr) return authErr
+
   try {
     const { id, fecha_hora, notas, estado, meeting_url } = await request.json()
     const { data, error } = await supabaseAdmin
@@ -96,8 +99,11 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE → cancelar cita
+// DELETE → cancelar cita (solo abogados)
 export async function DELETE(request: NextRequest) {
+  const { error: authErr } = await requireAbogado(request)
+  if (authErr) return authErr
+
   try {
     const { id } = await request.json()
     const { error } = await supabaseAdmin.from('citas').update({ estado: 'cancelada' }).eq('id', id)

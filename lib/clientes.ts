@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 
+/** Registro de la tabla `clientes` */
 export interface Cliente {
   id: number
   auth_user_id: string
@@ -10,6 +11,7 @@ export interface Cliente {
   created_at: string
 }
 
+/** Contrato de servicios legales entre un cliente y un abogado */
 export interface Contrato {
   id: number
   cliente_id: number
@@ -24,6 +26,7 @@ export interface Contrato {
   created_at: string
 }
 
+/** Cuota de pago asociada a un contrato */
 export interface Cuota {
   id: number
   contrato_id: number
@@ -34,6 +37,7 @@ export interface Cuota {
   estado: 'pendiente' | 'pagada' | 'vencida'
 }
 
+/** Evento del historial de un caso (timeline) */
 export interface TimelineEvento {
   id: number
   contrato_id: number
@@ -43,14 +47,22 @@ export interface TimelineEvento {
   completado: boolean
 }
 
-export async function obtenerDatosCliente() {
+/**
+ * Obtiene el registro del cliente autenticado en la sesión actual.
+ * Usa el `auth_user_id` del token para encontrar al cliente en la tabla.
+ */
+export async function obtenerDatosCliente(): Promise<{ cliente: Cliente | null }> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { cliente: null }
   const { data } = await supabase.from('clientes').select('*').eq('auth_user_id', user.id).single()
   return { cliente: data as Cliente | null }
 }
 
-export async function obtenerMisContratos(clienteId: number) {
+/**
+ * Lista todos los contratos de un cliente ordenados por fecha de creación descendente.
+ * @param clienteId - ID numérico del cliente en la tabla `clientes`
+ */
+export async function obtenerMisContratos(clienteId: number): Promise<{ contratos: Contrato[] }> {
   const { data } = await supabase
     .from('contratos')
     .select('*')
@@ -59,7 +71,11 @@ export async function obtenerMisContratos(clienteId: number) {
   return { contratos: (data || []) as Contrato[] }
 }
 
-export async function obtenerCuotasContrato(contratoId: number) {
+/**
+ * Lista las cuotas de un contrato ordenadas por número de cuota.
+ * @param contratoId - ID del contrato
+ */
+export async function obtenerCuotasContrato(contratoId: number): Promise<{ cuotas: Cuota[] }> {
   const { data } = await supabase
     .from('cuotas')
     .select('*')
@@ -68,7 +84,11 @@ export async function obtenerCuotasContrato(contratoId: number) {
   return { cuotas: (data || []) as Cuota[] }
 }
 
-export async function obtenerTimelineContrato(contratoId: number) {
+/**
+ * Lista los eventos del timeline de un caso ordenados cronológicamente.
+ * @param contratoId - ID del contrato asociado al caso
+ */
+export async function obtenerTimelineContrato(contratoId: number): Promise<{ eventos: TimelineEvento[] }> {
   const { data } = await supabase
     .from('timeline_eventos')
     .select('*')

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { requireAuth } from '@/lib/api-auth'
 
 export const TIPO_LABEL: Record<string, string> = {
   venta:                   '💰 Venta',
@@ -18,28 +14,21 @@ export const TIPO_LABEL: Record<string, string> = {
   otro:                    '📝 Otro',
 }
 
-async function getUsuarioInfo(request: Request) {
-  const token = request.headers.get('authorization')?.replace('Bearer ', '')
-  if (!token) return null
-  const { data: { user } } = await supabaseAdmin.auth.getUser(token)
-  if (!user) return null
-  const { data } = await supabaseAdmin
-    .from('usuarios')
-    .select('id, nombres, nombre_negocio, rol')
-    .eq('auth_user_id', user.id)
-    .maybeSingle()
-  if (!data) return null
-  const nombre = data.nombres?.split(' ')[0] ?? data.nombre_negocio?.split(' ')[0] ?? 'Usuario'
-  return { id: data.id as number, nombre, rol: data.rol as string }
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const usuario = await getUsuarioInfo(request)
-    if (!usuario) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { usuario, error: authErr } = await requireAuth(request)
+    if (authErr) return authErr
 
     const prospectoId = new URL(request.url).searchParams.get('prospecto_id')
     if (!prospectoId) return NextResponse.json({ error: 'prospecto_id requerido' }, { status: 400 })
+
+    // Verificar que el prospecto pertenece al usuario o fue creado por su supervisor
+    const { data: prospecto } = await supabaseAdmin
+      .from('prospectos').select('creado_por').eq('id', prospectoId).maybeSingle()
+    if (!prospecto) return NextResponse.json({ error: 'Prospecto no encontrado' }, { status: 404 })
+
+    const tieneAcceso = usuario!.rol === 'abogado' || prospecto.creado_por === usuario!.id
+    if (!tieneAcceso) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
 
     const { data, error } = await supabaseAdmin
       .from('tipificaciones')
@@ -56,16 +45,26 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const usuario = await getUsuarioInfo(request)
-    if (!usuario) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { usuario, error: authErr } = await requireAuth(request)
+    if (authErr) return authErr
 
     const { prospecto_id, tipo, nota } = await request.json()
+
+    // Verificar acceso al prospecto antes de tipificar
+    const { data: prospecto } = await supabaseAdmin
+      .from('prospectos').select('creado_por, nombre').eq('id', prospecto_id).maybeSingle()
+    if (!prospecto) return NextResponse.json({ error: 'Prospecto no encontrado' }, { status: 404 })
+
+    const tieneAcceso = usuario!.rol === 'abogado' || prospecto.creado_por === usuario!.id
+    if (!tieneAcceso) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
+
+    const nombreU = usuario!.nombres?.split(' ')[0] ?? usuario!.nombre_negocio?.split(' ')[0] ?? 'Usuario'
 
     const { data: tip, error: tipError } = await supabaseAdmin
       .from('tipificaciones')
       .insert({
         prospecto_id,
-        usuario_id: usuario.id,
+        usuario_id: usuario!.id,
         tipo,
         nota: tipo === 'otro' ? (nota ?? null) : null,
       })
@@ -77,33 +76,25 @@ export async function POST(request: NextRequest) {
     // Evento en timeline
     const label = TIPO_LABEL[tipo] ?? tipo
     const descripcion = tipo === 'otro' && nota
-      ? `${usuario.nombre} tipificó: ${label} — "${nota}"`
-      : `${usuario.nombre} tipificó: ${label}`
+      ? `${nombreU} tipificó: ${label} — "${nota}"`
+      : `${nombreU} tipificó: ${label}`
 
     await supabaseAdmin.from('prospecto_timeline').insert({
       prospecto_id,
-      usuario_id: usuario.id,
+      usuario_id: usuario!.id,
       evento: 'tipificacion',
       descripcion,
     })
 
     // Notificar al supervisor dueño si quien tipifica es un abogado
-    if (usuario.rol !== 'supervisor') {
-      const { data: prospecto } = await supabaseAdmin
-        .from('prospectos')
-        .select('creado_por, nombre')
-        .eq('id', prospecto_id)
-        .maybeSingle()
-
-      if (prospecto?.creado_por) {
-        await supabaseAdmin.from('notificaciones').insert({
-          usuario_id: prospecto.creado_por,
-          tipo: 'tipificacion',
-          titulo: `Tipificación de ${prospecto.nombre}`,
-          mensaje: descripcion,
-          leida: false,
-        })
-      }
+    if (usuario!.rol !== 'supervisor' && prospecto.creado_por) {
+      await supabaseAdmin.from('notificaciones').insert({
+        usuario_id: prospecto.creado_por,
+        tipo: 'tipificacion',
+        titulo: `Tipificación de ${prospecto.nombre}`,
+        mensaje: descripcion,
+        leida: false,
+      })
     }
 
     return NextResponse.json({ success: true, tipificacion: tip })

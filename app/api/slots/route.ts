@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { generarSlots } from '@/lib/helpers'
 
 const TZ = 'America/Santiago'
 
@@ -47,22 +43,7 @@ export async function GET(request: NextRequest) {
 
   if (!horario) return NextResponse.json({ slots: [] })
 
-  const slots: string[] = []
-  const [hInicio, mInicio] = horario.hora_inicio.split(':').map(Number)
-  const [hFin, mFin] = horario.hora_fin.split(':').map(Number)
-  let minutos = hInicio * 60 + mInicio
-  const minutesFin = hFin * 60 + mFin
-
-  while (minutos + 30 <= minutesFin) {
-    const h = String(Math.floor(minutos / 60)).padStart(2, '0')
-    const mm = String(minutos % 60).padStart(2, '0')
-    slots.push(`${h}:${mm}`)
-    minutos += 30
-  }
-
-  // Rango del día completo en zona horaria Chile
-  const inicioUTC = new Date(`${fechaISO}T00:00:00`).toLocaleString('sv-SE', { timeZone: TZ })
-  const finUTC = new Date(`${fechaISO}T23:59:59`).toLocaleString('sv-SE', { timeZone: TZ })
+  const slots = generarSlots(horario.hora_inicio, horario.hora_fin)
 
   const { data: citasOcupadas } = await supabaseAdmin
     .from('citas')

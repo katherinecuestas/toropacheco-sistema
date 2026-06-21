@@ -1,38 +1,29 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-async function getAbogadoId(request: Request) {
-  const token = request.headers.get('authorization')?.replace('Bearer ', '')
-  if (!token) return null
-  const { data: { user } } = await supabaseAdmin.auth.getUser(token)
-  if (!user) return null
-  const { data } = await supabaseAdmin.from('usuarios').select('id').eq('auth_user_id', user.id).maybeSingle()
-  return data?.id ?? null
-}
+import { requireAbogado } from '@/lib/api-auth'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export async function GET(request: Request) {
   try {
-    const abogadoId = await getAbogadoId(request)
-    if (!abogadoId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { usuario, error } = await requireAbogado(request)
+    if (error) return error
+    const abogadoId = usuario!.id
 
-    const [{ data: clientes }, { data: contratos }] = await Promise.all([
-      supabaseAdmin.from('clientes').select('*').order('created_at', { ascending: false }),
-      supabaseAdmin.from('contratos').select('*').eq('abogado_id', abogadoId),
-    ])
+    // Solo clientes que tienen al menos un contrato con este abogado
+    const { data: contratos, error: contratosError } = await supabaseAdmin
+      .from('contratos')
+      .select('*, clientes(*)')
+      .eq('abogado_id', abogadoId)
+      .order('created_at', { ascending: false })
 
-    const contratoByClienteId = Object.fromEntries(
-      (contratos ?? []).map(c => [c.cliente_id, c])
-    )
+    if (contratosError) return NextResponse.json({ error: contratosError.message }, { status: 400 })
 
-    const result = (clientes ?? []).map(c => ({
-      ...c,
-      contrato: contratoByClienteId[c.id] ?? null,
-    }))
+    const clienteIds = [...new Set((contratos ?? []).map(c => c.cliente_id))]
+
+    const result = clienteIds.map(id => {
+      const contratosCliente = (contratos ?? []).filter(c => c.cliente_id === id)
+      const cliente = contratosCliente[0]?.clientes ?? null
+      return { ...cliente, contrato: contratosCliente[0] ?? null }
+    })
 
     return NextResponse.json({ clientes: result })
   } catch {
@@ -42,8 +33,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const abogadoId = await getAbogadoId(request)
-    if (!abogadoId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { usuario, error } = await requireAbogado(request)
+    if (error) return error
+    const abogadoId = usuario!.id
 
     const { nombre, rut, email, telefono, tipo_servicio, descripcion, fecha_inicio, monto_total, monto_pie, clienteExistenteId } = await request.json()
 
@@ -78,10 +70,16 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const abogadoId = await getAbogadoId(request)
-    if (!abogadoId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { usuario, error } = await requireAbogado(request)
+    if (error) return error
+    const abogadoId = usuario!.id
 
     const { contrato_id, cliente_id, nombre, rut, email, telefono, tipo_servicio, descripcion, estado, fecha_inicio, monto_total, monto_pie } = await request.json()
+
+    // Verificar que el contrato pertenece a este abogado antes de modificar
+    const { data: contratoVerif } = await supabaseAdmin
+      .from('contratos').select('id').eq('id', contrato_id).eq('abogado_id', abogadoId).maybeSingle()
+    if (!contratoVerif) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
 
     await supabaseAdmin.from('clientes').update({ nombre, rut, email, telefono }).eq('id', cliente_id)
 
@@ -91,12 +89,13 @@ export async function PUT(request: Request) {
       .eq('contrato_id', contrato_id)
       .eq('estado', 'pagada')
 
-    const pagado = (cuotas ?? []).reduce((sum: number, c: any) => sum + c.monto, 0)
+    const pagado = (cuotas ?? []).reduce((sum: number, c: { monto: number }) => sum + c.monto, 0)
     const saldo = monto_total - monto_pie - pagado
 
     await supabaseAdmin.from('contratos')
       .update({ tipo_servicio, descripcion, estado, fecha_inicio, monto_total, monto_pie, saldo })
       .eq('id', contrato_id)
+      .eq('abogado_id', abogadoId)
 
     return NextResponse.json({ success: true })
   } catch {
@@ -106,12 +105,14 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const abogadoId = await getAbogadoId(request)
-    if (!abogadoId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { usuario, error } = await requireAbogado(request)
+    if (error) return error
+    const abogadoId = usuario!.id
 
     const { contrato_id, cliente_id } = await request.json()
 
-    await supabaseAdmin.from('contratos').delete().eq('id', contrato_id)
+    // Solo eliminar contratos que pertenecen a este abogado
+    await supabaseAdmin.from('contratos').delete().eq('id', contrato_id).eq('abogado_id', abogadoId)
 
     const { count } = await supabaseAdmin.from('contratos').select('*', { count: 'exact', head: true }).eq('cliente_id', cliente_id)
     if (count === 0) await supabaseAdmin.from('clientes').delete().eq('id', cliente_id)

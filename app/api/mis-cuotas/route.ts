@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { requireAbogado } from '@/lib/api-auth'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -45,7 +41,7 @@ export async function PUT(request: Request) {
     // Recalcular saldo del contrato
     const { data: contrato } = await supabaseAdmin.from('contratos').select('monto_total, monto_pie').eq('id', contrato_id).single()
     const { data: cuotas } = await supabaseAdmin.from('cuotas').select('monto').eq('contrato_id', contrato_id).eq('estado', 'pagada')
-    const pagado = (cuotas ?? []).reduce((sum: number, c: any) => sum + c.monto, 0)
+    const pagado = (cuotas ?? []).reduce((sum: number, c: { monto: number }) => sum + c.monto, 0)
     const saldo = (contrato?.monto_total ?? 0) - (contrato?.monto_pie ?? 0) - pagado
 
     await supabaseAdmin.from('contratos').update({ saldo }).eq('id', contrato_id)

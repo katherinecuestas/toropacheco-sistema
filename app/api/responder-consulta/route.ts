@@ -1,17 +1,18 @@
 import { Resend } from 'resend'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { requireAbogado } from '@/lib/api-auth'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 const FROM = 'Toro Pacheco & Asociados <no-reply@toropachecoasociados.cl>'
 
 export async function POST(request: NextRequest) {
+  const { usuario, error: authErr } = await requireAbogado(request)
+  if (authErr) return authErr
+
   try {
-    const { consultaId, respuesta, abogadoId } = await request.json()
+    const { consultaId, respuesta } = await request.json()
+    const abogadoId = usuario!.id
 
     // 1. Actualizar la consulta en la base de datos
     const { data: consulta, error } = await supabaseAdmin

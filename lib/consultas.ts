@@ -1,7 +1,8 @@
 import { supabase } from './supabase'
 
 /**
- * Tipo de datos para una consulta
+ * Consulta gratuita enviada por un cliente potencial a un abogado.
+ * El campo `token` (no incluido aquí) se usa para el enlace de confirmación por correo.
  */
 export interface Consulta {
   id: number
@@ -19,7 +20,16 @@ export interface Consulta {
 }
 
 /**
- * Enviar consulta gratuita (público, sin autenticación)
+ * Envía una consulta gratuita a un abogado (ruta pública, sin autenticación).
+ * Genera un token UUID único, inserta la consulta con estado `nueva`
+ * y dispara el correo de confirmación vía `/api/confirmar-consulta`.
+ *
+ * @param abogadoId - ID del abogado destinatario
+ * @param nombreCliente - Nombre completo del consultante
+ * @param emailCliente - Email al que llegará la confirmación
+ * @param asunto - Tema breve de la consulta
+ * @param mensaje - Descripción detallada del caso
+ * @param telefonoCliente - Teléfono opcional de contacto
  */
 export async function enviarConsulta(
   abogadoId: number,
@@ -67,7 +77,8 @@ export async function enviarConsulta(
 }
 
 /**
- * Obtener consultas del abogado autenticado
+ * Lista todas las consultas recibidas por el abogado autenticado, ordenadas por fecha descendente.
+ * Resuelve el `auth_user_id` del token de sesión para filtrar por abogado sin confiar en el cliente.
  */
 export async function obtenerMisConsultas() {
   try {
@@ -107,7 +118,13 @@ export async function obtenerMisConsultas() {
 }
 
 /**
- * Responder una consulta
+ * Envía la respuesta del abogado a una consulta, delegando a `/api/responder-consulta`.
+ * El endpoint extrae el `abogadoId` real del token, por lo que el parámetro aquí
+ * es ignorado en servidor — se incluye por compatibilidad con formularios existentes.
+ *
+ * @param consultaId - ID de la consulta a responder
+ * @param respuesta - Texto de la respuesta
+ * @param abogadoId - ID del abogado (redundante; el server lo extrae del JWT)
  */
 export async function responderConsulta(
   consultaId: number,
@@ -130,7 +147,10 @@ export async function responderConsulta(
 }
 
 /**
- * Rechazar una consulta
+ * Marca una consulta como `rechazada` directamente en la base de datos.
+ * A diferencia de `responderConsulta`, no pasa por una ruta API — usa el cliente de sesión.
+ *
+ * @param consultaId - ID de la consulta a rechazar
  */
 export async function rechazarConsulta(consultaId: number) {
   try {

@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/api-auth'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// GET → listar todos los abogados
+export async function GET(request: Request) {
+  const { error } = await requireAdmin(request)
+  if (error) return error
 
-// GET → listar todos los abogados (sin restricciones de RLS)
-export async function GET() {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error: dbError } = await supabaseAdmin
       .from('usuarios')
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (error) return NextResponse.json({ abogados: null, error: error.message }, { status: 400 })
+    if (dbError) return NextResponse.json({ abogados: null, error: dbError.message }, { status: 400 })
     return NextResponse.json({ abogados: data })
   } catch {
     return NextResponse.json({ abogados: null, error: 'Error interno' }, { status: 500 })
@@ -23,6 +22,9 @@ export async function GET() {
 
 // POST → crear abogado
 export async function POST(request: NextRequest) {
+  const { error: authError } = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const { email, password, nombres, apellido_paterno, apellido_materno, rut, dv, nombre_usuario, telefono, is_admin } = await request.json()
 
@@ -71,6 +73,9 @@ export async function POST(request: NextRequest) {
 
 // PUT → editar abogado
 export async function PUT(request: NextRequest) {
+  const { error: authError } = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const { id, auth_user_id, email, nombres, apellido_paterno, apellido_materno, rut, dv, nombre_usuario, telefono, is_admin, estado } = await request.json()
 
@@ -110,8 +115,15 @@ export async function PUT(request: NextRequest) {
 
 // PATCH → toggle estado o cambiar contraseña
 export async function PATCH(request: NextRequest) {
+  const { error: authError } = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const { id, auth_user_id, action, estado, password } = await request.json()
+
+    if (action === 'cambiar-password' && (!password || password.length < 8)) {
+      return NextResponse.json({ success: false, error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 })
+    }
 
     if (action === 'toggle-estado') {
       await supabaseAdmin.from('usuarios').update({ estado }).eq('id', id)
@@ -135,6 +147,9 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE → eliminar abogado
 export async function DELETE(request: NextRequest) {
+  const { error: authError } = await requireAdmin(request)
+  if (authError) return authError
+
   try {
     const { id, auth_user_id } = await request.json()
 

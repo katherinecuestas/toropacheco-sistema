@@ -1,43 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-// Ruta de uso único — llamar una sola vez desde el browser para crear a Vladimir.
-// Luego puede eliminarse o protegerse con una variable de entorno.
-export async function POST(request: NextRequest) {
-  try {
-    const { email, password, nombre } = await request.json()
-    if (!email || !password || !nombre) {
-      return NextResponse.json({ error: 'email, password y nombre son requeridos' }, { status: 400 })
-    }
-
-    // 1. Crear usuario en Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    })
-    if (authError) return NextResponse.json({ error: authError.message }, { status: 400 })
-
-    // 2. Insertar en abogados con rol = 'supervisor'
-    const { error: dbError } = await supabaseAdmin.from('usuarios').insert({
-      auth_user_id: authData.user.id,
-      email,
-      nombre_negocio: nombre,
-      rol: 'supervisor',
-      estado: true,
-    })
-    if (dbError) {
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-      return NextResponse.json({ error: dbError.message }, { status: 400 })
-    }
-
-    return NextResponse.json({ success: true, message: `Usuario ${nombre} creado como supervisor.` })
-  } catch {
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
-  }
+// Ruta deshabilitada — fue de uso único para crear el supervisor inicial.
+// Si necesitas crear otro supervisor, usa /api/admin/abogados con is_admin:true
+// o directamente desde el panel de Supabase.
+export async function POST() {
+  return NextResponse.json({ error: 'Ruta deshabilitada' }, { status: 410 })
 }

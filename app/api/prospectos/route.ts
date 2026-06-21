@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { TRIBUNALES } from '@/lib/tribunales'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { generateTempPassword } from '@/lib/helpers'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 function findCorte(juzgado: string | null | undefined): string {
@@ -149,9 +146,9 @@ export async function PATCH(request: NextRequest) {
 
         // Crear usuario en Supabase Auth (solo si tiene email)
         if (p.email) {
-          const PASSWORD = 'Bienvenido2026!'
+          const tempPassword = generateTempPassword()
           const { data: authData } = await supabaseAdmin.auth.admin.createUser({
-            email: p.email, password: PASSWORD, email_confirm: true,
+            email: p.email, password: tempPassword, email_confirm: true,
           })
           if (authData?.user) {
             await supabaseAdmin.from('clientes').insert({
@@ -161,7 +158,7 @@ export async function PATCH(request: NextRequest) {
             })
           }
 
-          // Email de bienvenida
+          // Email de bienvenida con contraseña temporal única
           await resend.emails.send({
             from: 'Toro Pacheco & Asociados <notificaciones@toropachecoasociados.cl>',
             to: p.email,
@@ -175,7 +172,7 @@ export async function PATCH(request: NextRequest) {
               '  https://toropachecoasociados.cl/mi-cuenta',
               '',
               `  Email: ${p.email}`,
-              `  Contraseña temporal: Bienvenido2026!`,
+              `  Contraseña temporal: ${tempPassword}`,
               '',
               'Te recomendamos cambiar tu contraseña al ingresar por primera vez.',
               '',

@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/api-auth'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+export async function GET(request: Request) {
+  const { error } = await requireAdmin(request)
+  if (error) return error
 
-export async function GET() {
-  const { data, error } = await supabaseAdmin.from('consultas').select('*').order('created_at', { ascending: false })
-  if (error) return NextResponse.json({ consultas: null, error: error.message }, { status: 400 })
+  const { data, error: dbError } = await supabaseAdmin.from('consultas').select('*').order('created_at', { ascending: false })
+  if (dbError) return NextResponse.json({ consultas: null, error: dbError.message }, { status: 400 })
   return NextResponse.json({ consultas: data })
 }
 
 export async function POST(request: NextRequest) {
+  const { error } = await requireAdmin(request)
+  if (error) return error
+
   try {
     const { abogado_id, nombre_cliente, email_cliente, telefono_cliente, asunto, mensaje, estado } = await request.json()
     const { data, error } = await supabaseAdmin

@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/api-auth'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+export async function GET(request: Request) {
+  const { error } = await requireAdmin(request)
+  if (error) return error
 
-export async function GET() {
   const [
     { count: totalAbogados },
     { count: abogadosActivos },
