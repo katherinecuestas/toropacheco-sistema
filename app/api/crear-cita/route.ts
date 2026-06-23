@@ -1,12 +1,20 @@
 import { Resend } from 'resend'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { requireAbogado } from '@/lib/api-auth'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(request: NextRequest) {
   try {
-    const { consultaId, abogadoId, nombreCliente, emailCliente, fechaHora, meetingUrl, creadaPorAbogado } = await request.json()
+    const body = await request.json()
+    const { consultaId, abogadoId, nombreCliente, emailCliente, fechaHora, meetingUrl, creadaPorAbogado } = body
+
+    // Solo el flujo del abogado (dashboard) requiere auth; la reserva pública desde la landing no tiene token
+    if (creadaPorAbogado) {
+      const { error: authErr } = await requireAbogado(request)
+      if (authErr) return authErr
+    }
 
     // 1. Guardar cita en Supabase
     const { data: cita, error: citaError } = await supabaseAdmin

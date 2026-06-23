@@ -1,11 +1,15 @@
 import { Resend } from 'resend'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAbogado } from '@/lib/api-auth'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = 'Toro Pacheco & Asociados <no-reply@toropachecoasociados.cl>'
 
 export async function POST(request: NextRequest) {
   try {
+    const { error: authErr } = await requireAbogado(request)
+    if (authErr) return authErr
+
     const { emailCliente, nombreCliente, asunto, respuesta } = await request.json()
 
     const { error } = await resend.emails.send({

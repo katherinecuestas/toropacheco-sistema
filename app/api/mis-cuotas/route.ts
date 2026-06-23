@@ -18,6 +18,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { error: authErr } = await requireAbogado(request)
+    if (authErr) return authErr
+
     const { contrato_id, numero, monto, fecha_vencimiento } = await request.json()
 
     const { data, error } = await supabaseAdmin
