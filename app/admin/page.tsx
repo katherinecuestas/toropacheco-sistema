@@ -59,7 +59,7 @@ export default function AdminPage() {
   const [formCrearUsuario, setFormCrearUsuario] = useState(EMPTY_ABOGADO)
   const [creandoUsuario, setCreandoUsuario] = useState(false)
   const [modalCrearSupervisor, setModalCrearSupervisor] = useState(false)
-  const [formSupervisor, setFormSupervisor] = useState({ nombre: '', email: '', password: '' })
+  const [formSupervisor, setFormSupervisor] = useState({ nombres: '', email: '', password: '' })
   const [creandoSupervisor, setCreandoSupervisor] = useState(false)
   const [abogadoEditando, setUsuarioEditando] = useState<Usuario | null>(null)
   const [formEditarUsuario, setFormEditarUsuario] = useState({
@@ -756,7 +756,7 @@ export default function AdminPage() {
               <h1 className="text-2xl font-bold text-gray-900">
                 Supervisores ({abogados.filter(a => (a as any).rol === 'supervisor').length})
               </h1>
-              <button onClick={() => { setFormSupervisor({ nombre: '', email: '', password: '' }); setModalCrearSupervisor(true) }}
+              <button onClick={() => { setFormSupervisor({ nombres: '', email: '', password: '' }); setModalCrearSupervisor(true) }}
                 className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
                 + Agregar supervisor
               </button>
@@ -1160,7 +1160,7 @@ export default function AdminPage() {
               e.preventDefault()
               setCreandoSupervisor(true)
               const data = await crearAbogado({
-                nombres: formSupervisor.nombre,
+                nombres: formSupervisor.nombres,
                 apellido_paterno: '',
                 apellido_materno: '',
                 nombre_usuario: '',
@@ -1171,7 +1171,7 @@ export default function AdminPage() {
               if (data.success) {
                 mostrarMensaje('exito', 'Supervisor creado correctamente.')
                 setModalCrearSupervisor(false)
-                setFormSupervisor({ nombre: '', email: '', password: '' })
+                setFormSupervisor({ nombres: '', email: '', password: '' })
                 await recargarBase()
               } else {
                 mostrarMensaje('error', data.error || 'Error al crear supervisor.')
@@ -1180,8 +1180,8 @@ export default function AdminPage() {
             }} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-                <input required type="text" value={formSupervisor.nombre}
-                  onChange={e => setFormSupervisor(f => ({ ...f, nombre: e.target.value }))}
+                <input required type="text" value={formSupervisor.nombres}
+                  onChange={e => setFormSupervisor(f => ({ ...f, nombres: e.target.value }))}
                   placeholder="Ej: Vladimir" className={inputCls} />
               </div>
               <div>
