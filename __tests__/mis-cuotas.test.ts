@@ -1,4 +1,4 @@
-import { GET, PUT, DELETE } from '../app/api/mis-cuotas/route'
+import { GET, POST, PUT, DELETE } from '../app/api/mis-cuotas/route'
 import { db, resetDb, req, TOKEN, ABOGADO_ID, OTRO_ABOGADO_ID, type Respuesta } from './support/fakeSupabase'
 
 jest.mock('../lib/supabase-admin', () => jest.requireActual('./support/fakeSupabase'))
@@ -28,6 +28,8 @@ beforeEach(() => resetDb({
 
 const get = async (token?: string, contratoId = CONTRATO_PROPIO) =>
   (await GET(req('GET', `/api/mis-cuotas?contrato_id=${contratoId}`, token))) as unknown as Respuesta
+const post = async (token: string | undefined, contratoId: number) =>
+  (await POST(req('POST', '/api/mis-cuotas', token, { contrato_id: contratoId, numero: 2, monto: 80000, fecha_vencimiento: '2026-11-05' }))) as unknown as Respuesta
 const put = async (token: string | undefined, body: unknown) =>
   (await PUT(req('PUT', '/api/mis-cuotas', token, body))) as unknown as Respuesta
 const del = async (token: string | undefined, id: number) =>
@@ -91,5 +93,30 @@ describe('DELETE /api/mis-cuotas', () => {
   it('200 borra la cuota propia', async () => {
     expect((await del(TOKEN.abogado, CUOTA_PROPIA)).status).toBe(200)
     expect(cuota(CUOTA_PROPIA)).toBeUndefined()
+  })
+})
+
+describe('POST /api/mis-cuotas', () => {
+  const cuotasDe = (contratoId: number) => db.cuotas.filter(c => c.contrato_id === contratoId)
+
+  it('401 sin token, sin crear la cuota', async () => {
+    expect((await post(undefined, CONTRATO_PROPIO)).status).toBe(401)
+    expect(cuotasDe(CONTRATO_PROPIO)).toHaveLength(1)
+  })
+
+  it('403 con token de supervisor', async () => expect((await post(TOKEN.supervisor, CONTRATO_PROPIO)).status).toBe(403))
+
+  it('403 si el contrato es de otro abogado, sin crear la cuota', async () => {
+    expect((await post(TOKEN.abogado, CONTRATO_AJENO)).status).toBe(403)
+    expect(cuotasDe(CONTRATO_AJENO)).toHaveLength(1)
+  })
+
+  it('404 si el contrato no existe', async () => expect((await post(TOKEN.abogado, 999)).status).toBe(404))
+
+  it('200 crea la cuota pendiente en el contrato propio', async () => {
+    const res = await post(TOKEN.abogado, CONTRATO_PROPIO)
+    expect(res.status).toBe(200)
+    expect(cuotasDe(CONTRATO_PROPIO)).toHaveLength(2)
+    expect((res.body.cuota as { estado: string }).estado).toBe('pendiente')
   })
 })
