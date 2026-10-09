@@ -48,7 +48,7 @@ export default function AdminPage() {
   const router = useRouter()
   const [vista, setVista] = useState<Vista>('inicio')
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({ totalUsuarios: 0, abogadosActivos: 0, totalConsultas: 0, consultasNuevas: 0, consultasRespondidas: 0 })
+  const [stats, setStats] = useState({ totalAbogados: 0, abogadosActivos: 0, totalConsultas: 0, consultasNuevas: 0, consultasRespondidas: 0 })
   const [abogados, setUsuarios] = useState<Usuario[]>([])
   const [consultas, setConsultas] = useState<any[]>([])
   const [filtroEstado, setFiltroEstado] = useState('todos')
@@ -409,7 +409,7 @@ export default function AdminPage() {
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
               {[
-                { label: 'Usuarios', valor: stats.totalUsuarios, color: azul },
+                { label: 'Usuarios', valor: stats.totalAbogados, color: azul },
                 { label: 'Activos', valor: stats.abogadosActivos, color: '#10B981' },
                 { label: 'Consultas', valor: stats.totalConsultas, color: azul },
                 { label: 'Nuevas', valor: stats.consultasNuevas, color: dorado },
@@ -425,7 +425,7 @@ export default function AdminPage() {
             {/* Cards de navegación */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {([
-                { titulo: 'Usuarios',    icon: '⚖️',  desc: `${stats.abogadosActivos} activos de ${stats.totalUsuarios}`,  v: 'abogados'    as Vista, bg: azul },
+                { titulo: 'Usuarios',    icon: '⚖️',  desc: `${stats.abogadosActivos} activos de ${stats.totalAbogados}`,  v: 'abogados'    as Vista, bg: azul },
                 { titulo: 'Consultas',   icon: '💬',  desc: `${stats.consultasNuevas} nuevas pendientes`,                  v: 'consultas'   as Vista, bg: azulProfundo },
                 { titulo: 'Clientes',    icon: '👤',  desc: `${clientes.length} registrados`,                              v: 'clientes'    as Vista, bg: azul },
                 { titulo: 'Supervisores',icon: '🔎',  desc: 'Gestionar supervisores',                                      v: 'supervisores' as Vista, bg: azulProfundo },
@@ -453,7 +453,7 @@ export default function AdminPage() {
           <div>
             <button onClick={() => setVista('inicio')} className="flex items-center gap-1.5 text-sm font-medium mb-5 transition-opacity hover:opacity-70" style={{ color: azul }}>← Volver</button>
             <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">Usuarios ({abogados.length})</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Usuarios ({abogados.filter(a => a.rol === 'abogado').length})</h1>
               <button onClick={() => setModalCrearUsuario(true)} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg">+ Nuevo abogado</button>
             </div>
 
@@ -475,7 +475,7 @@ export default function AdminPage() {
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h3 className="font-bold text-gray-900 text-lg">{nombreCompleto}</h3>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a.es_admin ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
-                              {a.es_admin ? 'Admin' : 'Usuario'}
+                              {a.es_admin ? 'Admin' : a.rol === 'supervisor' ? 'Supervisor' : 'Abogado'}
                             </span>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a.estado ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                               {a.estado ? 'Activo' : 'Deshabilitado'}
@@ -1159,12 +1159,15 @@ export default function AdminPage() {
             <form onSubmit={async e => {
               e.preventDefault()
               setCreandoSupervisor(true)
-              const res = await fetch('/api/admin/setup-supervisor', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formSupervisor),
+              const data = await crearAbogado({
+                nombres: formSupervisor.nombre,
+                apellido_paterno: '',
+                apellido_materno: '',
+                nombre_usuario: '',
+                email: formSupervisor.email,
+                password: formSupervisor.password,
+                rol: 'supervisor',
               })
-              const data = await res.json()
               if (data.success) {
                 mostrarMensaje('exito', 'Supervisor creado correctamente.')
                 setModalCrearSupervisor(false)

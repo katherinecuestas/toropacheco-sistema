@@ -13,8 +13,9 @@ export async function GET(request: Request) {
     { count: consultasNuevas },
     { count: consultasRespondidas },
   ] = await Promise.all([
-    supabaseAdmin.from('usuarios').select('*', { count: 'exact', head: true }),
-    supabaseAdmin.from('usuarios').select('*', { count: 'exact', head: true }).eq('estado', true),
+    // Solo rol 'abogado': es lo que lista la vista "Usuarios" de /admin (los supervisores tienen su propia vista)
+    supabaseAdmin.from('usuarios').select('*', { count: 'exact', head: true }).eq('rol', 'abogado'),
+    supabaseAdmin.from('usuarios').select('*', { count: 'exact', head: true }).eq('rol', 'abogado').eq('estado', true),
     supabaseAdmin.from('consultas').select('*', { count: 'exact', head: true }),
     supabaseAdmin.from('consultas').select('*', { count: 'exact', head: true }).eq('estado', 'nueva'),
     supabaseAdmin.from('consultas').select('*', { count: 'exact', head: true }).eq('estado', 'respondida'),

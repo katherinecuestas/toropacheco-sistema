@@ -20,6 +20,9 @@ async function sincronizarAdmin(authUserId: string, esAdmin: boolean) {
   return true
 }
 
+/** Roles que se pueden asignar al crear un usuario interno desde /admin */
+const ROLES_VALIDOS = ['abogado', 'supervisor'] as const
+
 // GET → listar todos los abogados
 export async function GET(request: Request) {
   const { error } = await requireAdmin(request)
@@ -47,13 +50,19 @@ export async function GET(request: Request) {
   }
 }
 
-// POST → crear abogado
+// POST → crear abogado o supervisor (rol: 'abogado' por defecto)
 export async function POST(request: NextRequest) {
   const { error: authError } = await requireAdmin(request)
   if (authError) return authError
 
   try {
-    const { email, password, nombres, apellido_paterno, apellido_materno, rut, dv, nombre_usuario, telefono, es_admin } = await request.json()
+    const { email, password, nombres, apellido_paterno, apellido_materno, rut, dv, nombre_usuario, telefono, es_admin, rol } = await request.json()
+
+    // Se valida antes de crear la cuenta en Auth, para no dejar usuarios huérfanos
+    const rolFinal = rol ?? 'abogado'
+    if (!ROLES_VALIDOS.includes(rolFinal)) {
+      return NextResponse.json({ success: false, error: "Rol inválido: debe ser 'abogado' o 'supervisor'" }, { status: 400 })
+    }
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -81,6 +90,7 @@ export async function POST(request: NextRequest) {
         nombre: nombreCompleto || null,
         nombre_negocio: nombreCompleto || '',
         telefono: telefono || null,
+        rol: rolFinal,
         estado: true,
       })
       .select()
