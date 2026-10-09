@@ -9,7 +9,8 @@ import { ProspectoModal } from '@/components/ProspectoModal'
 import { supabase } from '@/lib/supabase'
 import { authHeaders } from '@/lib/auth-headers'
 import { partesChile } from '@/lib/zona-horaria'
-import { obtenerTimelineContrato, crearEvento, editarEvento, eliminarEvento } from '@/lib/admin'
+import { obtenerTimelineContrato, crearEvento, editarEvento, eliminarEvento } from '@/lib/mis-timeline'
+import { verificarAdmin } from '@/lib/admin'
 import { obtenerMisConsultas, responderConsulta, rechazarConsulta, type Consulta } from '@/lib/consultas'
 import {
   obtenerDisponibilidad,
@@ -32,6 +33,8 @@ export default function DashboardPage() {
   const [seccionAbierta, setSeccionAbierta] = useState<Seccion | null>(null)
   const [loading, setLoading] = useState(true)
   const [abogado, setAbogado] = useState<any>(null)
+  // Admin = fila en la tabla `admins` (única fuente de verdad), no usuarios.is_admin
+  const [esAdmin, setEsAdmin] = useState(false)
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null)
 
   // Consultas
@@ -118,6 +121,7 @@ export default function DashboardPage() {
       const { abogado: datosAbogado } = await obtenerDatosAbogado()
       if (!datosAbogado || datosAbogado.estado === false) { router.push('/login'); return }
       setAbogado(datosAbogado)
+      verificarAdmin().then(setEsAdmin)
       if (datosAbogado) {
         const [consultasRes, citasRes, disponRes] = await Promise.all([
           obtenerMisConsultas(),
@@ -708,10 +712,10 @@ export default function DashboardPage() {
                   {abogado?.nombres?.split(' ')[0] ?? abogado?.nombre_negocio?.split(' ')[0]}
                 </span>
                 <span className="text-xs px-2 py-0.5 rounded font-bold" style={{ backgroundColor: dorado + '33', color: dorado }}>
-                  {abogado?.is_admin ? 'ADMIN' : 'ABOGADO'}
+                  {esAdmin ? 'ADMIN' : 'ABOGADO'}
                 </span>
               </span>
-              {abogado?.is_admin && (
+              {esAdmin && (
                 <a href="/admin" className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg whitespace-nowrap transition-all"
                   style={{ color: 'rgba(255,255,255,0.65)' }}>Admin</a>
               )}
@@ -836,7 +840,7 @@ export default function DashboardPage() {
             <span className="text-[10px] font-semibold">{label}</span>
           </button>
         ))}
-        {abogado?.is_admin && (
+        {esAdmin && (
           <a href="/admin" className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5"
             style={{ color: 'rgba(255,255,255,0.5)' }}>
             <span className="text-lg leading-none">⚙️</span>

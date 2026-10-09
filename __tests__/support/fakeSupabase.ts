@@ -92,6 +92,12 @@ export const supabaseAdmin = {
       const authId = tokens[token]
       return { data: { user: authId ? { id: authId } : null } }
     },
+    // API admin de Auth: solo lo necesario para /api/admin/abogados
+    admin: {
+      createUser: async () => ({ data: { user: { id: `auth-nuevo-${Date.now()}` } }, error: null }),
+      updateUserById: async () => ({ data: {}, error: null }),
+      deleteUser: async () => ({ data: {}, error: null }),
+    },
   },
 }
 
@@ -117,11 +123,12 @@ export function resetDb(tablas: Record<string, Row[]> = {}) {
     [TOKEN.admin]: 'auth-admin',
   })
   db.usuarios = [
-    { id: ABOGADO_ID, auth_user_id: 'auth-abogado-1', rol: 'abogado', is_admin: false, nombres: 'Branco', nombre_negocio: null },
-    { id: OTRO_ABOGADO_ID, auth_user_id: 'auth-abogado-2', rol: 'abogado', is_admin: false, nombres: 'Otra', nombre_negocio: null },
-    { id: 3, auth_user_id: 'auth-supervisor', rol: 'supervisor', is_admin: false, nombres: 'Vladimir', nombre_negocio: null },
-    { id: 4, auth_user_id: 'auth-admin', rol: 'abogado', is_admin: true, nombres: 'Admin', nombre_negocio: null },
+    { id: ABOGADO_ID, auth_user_id: 'auth-abogado-1', rol: 'abogado', nombres: 'Branco', nombre_negocio: null },
+    { id: OTRO_ABOGADO_ID, auth_user_id: 'auth-abogado-2', rol: 'abogado', nombres: 'Otra', nombre_negocio: null },
+    { id: 3, auth_user_id: 'auth-supervisor', rol: 'supervisor', nombres: 'Vladimir', nombre_negocio: null },
   ]
+  // El admin existe solo en la tabla admins (única fuente de verdad), sin fila en usuarios
+  db.admins = [{ id: 1, auth_user_id: 'auth-admin' }]
   for (const [tabla, filas] of Object.entries(tablas)) db[tabla] = filas.map(r => ({ ...r }))
 }
 

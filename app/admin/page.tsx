@@ -33,7 +33,7 @@ function generarNombreUsuario(nombres: string, apellidoPaterno: string, apellido
 
 const EMPTY_ABOGADO = {
   nombres: '', apellido_paterno: '', apellido_materno: '',
-  rut: '', dv: '', nombre_usuario: '', email: '', password: '', telefono: '', is_admin: false,
+  rut: '', dv: '', nombre_usuario: '', email: '', password: '', telefono: '', es_admin: false,
 }
 const EMPTY_CONSULTA = { abogado_id: '', nombre_cliente: '', email_cliente: '', telefono_cliente: '', asunto: '', mensaje: '', estado: 'nueva' }
 const EMPTY_EDITAR_CONSULTA = { nombre_cliente: '', email_cliente: '', telefono_cliente: '', asunto: '', mensaje: '', estado: 'nueva', respuesta: '' }
@@ -64,7 +64,7 @@ export default function AdminPage() {
   const [abogadoEditando, setUsuarioEditando] = useState<Usuario | null>(null)
   const [formEditarUsuario, setFormEditarUsuario] = useState({
     email: '', nombres: '', apellido_paterno: '', apellido_materno: '',
-    rut: '', dv: '', nombre_usuario: '', telefono: '', is_admin: false, estado: true,
+    rut: '', dv: '', nombre_usuario: '', telefono: '', es_admin: false, estado: true,
   })
   const [editandoUsuario, setEditandoUsuario] = useState(false)
   const [modalPassword, setModalPassword] = useState<Usuario | null>(null)
@@ -176,7 +176,7 @@ export default function AdminPage() {
       email: formCrearUsuario.email,
       password: formCrearUsuario.password,
       telefono: formCrearUsuario.telefono,
-      is_admin: formCrearUsuario.is_admin,
+      es_admin: formCrearUsuario.es_admin,
     })
     if (result.success) { mostrarMensaje('exito', 'Usuario creado.'); setModalCrearUsuario(false); setFormCrearUsuario(EMPTY_ABOGADO); await recargarBase() }
     else mostrarMensaje('error', result.error || 'Error.')
@@ -194,7 +194,7 @@ export default function AdminPage() {
       dv: abogado.dv || '',
       nombre_usuario: abogado.nombre_usuario || '',
       telefono: abogado.telefono || '',
-      is_admin: abogado.is_admin,
+      es_admin: abogado.es_admin,
       estado: abogado.estado,
     })
   }
@@ -474,8 +474,8 @@ export default function AdminPage() {
                         <div>
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h3 className="font-bold text-gray-900 text-lg">{nombreCompleto}</h3>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a.is_admin ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
-                              {a.is_admin ? 'Admin' : 'Usuario'}
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a.es_admin ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {a.es_admin ? 'Admin' : 'Usuario'}
                             </span>
                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a.estado ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                               {a.estado ? 'Activo' : 'Deshabilitado'}
@@ -494,11 +494,11 @@ export default function AdminPage() {
                           </button>
                           <button
                             onClick={() => handleToggleEstado(a)}
-                            disabled={togglandoEstado === a.id || a.is_admin}
+                            disabled={togglandoEstado === a.id || a.es_admin}
                             className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50 ${a.estado ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>
                             {togglandoEstado === a.id ? '...' : a.estado ? 'Deshabilitar' : 'Habilitar'}
                           </button>
-                          {!a.is_admin && (
+                          {!a.es_admin && (
                             <button onClick={() => setConfirmarEliminar({ tipo: 'abogado', id: a.id, auth_user_id: a.auth_user_id })}
                               className="text-xs px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-medium">
                               Eliminar
