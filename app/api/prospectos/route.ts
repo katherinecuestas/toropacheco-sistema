@@ -3,8 +3,12 @@ import { Resend } from 'resend'
 import { TRIBUNALES } from '@/lib/tribunales'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { generateTempPassword } from '@/lib/helpers'
+import { requireAbogado } from '@/lib/api-auth'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+
+/** Estados del pipeline que los abogados ven en GET y pueden gestionar */
+const ESTADOS_VISIBLES_ABOGADO = ['interesado', 'agendado', 'cotizacion_enviada', 'acepto_cotizacion', 'venta']
 
 function findCorte(juzgado: string | null | undefined): string {
   if (!juzgado) return '—'
@@ -33,7 +37,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabaseAdmin
       .from('prospectos')
       .select('*, tipificaciones(id)')
-      .in('estado', ['interesado', 'agendado', 'cotizacion_enviada', 'acepto_cotizacion', 'venta'])
+      .in('estado', ESTADOS_VISIBLES_ABOGADO)
       .order('created_at', { ascending: false })
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
@@ -95,11 +99,19 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const abogadoId = await getAbogadoId(request)
-    if (!abogadoId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const { usuario, error: authErr } = await requireAbogado(request)
+    if (authErr) return authErr
+    const abogadoId = usuario!.id
 
     const body = await request.json()
     const { id, estado } = body
+
+    // Permiso: el prospecto debe estar en el pipeline visible para abogados (GET) o haberlo creado él
+    const { data: actual } = await supabaseAdmin
+      .from('prospectos').select('id, estado, creado_por').eq('id', id).maybeSingle()
+    if (!actual) return NextResponse.json({ error: 'Prospecto no encontrado' }, { status: 404 })
+    const tienePermiso = ESTADOS_VISIBLES_ABOGADO.includes(actual.estado) || actual.creado_por === abogadoId
+    if (!tienePermiso) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
 
     // Cambio de estado explícito
     if (estado) {
@@ -107,7 +119,7 @@ export async function PATCH(request: NextRequest) {
         .from('prospectos')
         .update({ estado })
         .eq('id', id)
-      if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+      if (error) return NextResponse.json({ error: 'Error al actualizar el prospecto' }, { status: 500 })
 
       // Evento timeline para cualquier cambio de estado
       const { data: u } = await supabaseAdmin
@@ -199,7 +211,7 @@ export async function PATCH(request: NextRequest) {
       .from('prospectos')
       .update({ revisado: true })
       .eq('id', id)
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    if (error) return NextResponse.json({ error: 'Error al actualizar el prospecto' }, { status: 500 })
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

@@ -77,6 +77,28 @@ describe('requireAuth()', () => {
 
 // ─── requireAdmin ─────────────────────────────────────────────────────────────
 
+describe('guards de rol sin sesión válida', () => {
+  it.each([
+    ['requireAdmin', requireAdmin],
+    ['requireSupervisor', requireSupervisor],
+    ['requireAbogado', requireAbogado],
+  ])('%s devuelve 401 (no 403) si no hay token', async (_nombre, guard) => {
+    const { usuario, error } = await guard(buildRequest())
+    expect(usuario).toBeNull()
+    expect((error as { status: number }).status).toBe(401)
+  })
+
+  it.each([
+    ['requireAdmin', requireAdmin],
+    ['requireSupervisor', requireSupervisor],
+    ['requireAbogado', requireAbogado],
+  ])('%s devuelve 401 si Supabase no reconoce el token', async (_nombre, guard) => {
+    setupSupabase(null, null)
+    const { error } = await guard(buildRequest('token-invalido'))
+    expect((error as { status: number }).status).toBe(401)
+  })
+})
+
 describe('requireAdmin()', () => {
   it('devuelve 403 para abogado sin is_admin', async () => {
     setupSupabase({ id: 'uuid-a' }, usuarioAbogado)

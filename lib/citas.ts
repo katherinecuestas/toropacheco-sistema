@@ -1,6 +1,18 @@
 import { supabase } from './supabase'
 
 /**
+ * Headers con el access token de la sesión actual, requerido por las rutas `/api/citas`.
+ * `getSession()` refresca el token si expiró.
+ */
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession()
+  return {
+    'Content-Type': 'application/json',
+    ...(session ? { authorization: `Bearer ${session.access_token}` } : {}),
+  }
+}
+
+/**
  * Franja horaria de disponibilidad semanal de un abogado.
  * Un abogado puede tener múltiples franjas activas por día.
  */
@@ -92,11 +104,10 @@ export async function obtenerSlotsDisponibles(abogadoId: number, fechaISO: strin
 }
 
 /**
- * Lista todas las citas de un abogado.
- * @param abogadoId - ID del abogado
+ * Lista todas las citas del abogado autenticado (el servidor lo obtiene del token).
  */
-export async function obtenerMisCitas(abogadoId: number) {
-  const res = await fetch(`/api/citas?abogado_id=${abogadoId}`)
+export async function obtenerMisCitas() {
+  const res = await fetch('/api/citas', { headers: await authHeaders() })
   return res.json()
 }
 
@@ -143,7 +154,7 @@ export async function toggleFechaBloqueada(abogadoId: number, fecha: string, blo
 export async function confirmarCita(id: number) {
   const res = await fetch('/api/citas', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({ id, action: 'confirmar' }),
   })
   return res.json()
@@ -157,7 +168,7 @@ export async function confirmarCita(id: number) {
 export async function editarCita(id: number, datos: { fecha_hora: string; notas?: string; estado: string; meeting_url?: string }) {
   const res = await fetch('/api/citas', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({ id, ...datos }),
   })
   return res.json()
@@ -170,7 +181,7 @@ export async function editarCita(id: number, datos: { fecha_hora: string; notas?
 export async function cancelarCita(id: number) {
   const res = await fetch('/api/citas', {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({ id }),
   })
   return res.json()
