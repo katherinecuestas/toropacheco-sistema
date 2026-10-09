@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { authHeaders } from './auth-headers'
 
 /**
  * Consulta gratuita enviada por un cliente potencial a un abogado.
@@ -134,7 +135,7 @@ export async function responderConsulta(
   try {
     const res = await fetch('/api/responder-consulta', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({ consultaId, respuesta, abogadoId }),
     })
     return res.json()

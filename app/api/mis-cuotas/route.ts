@@ -53,17 +53,20 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { error: authErr } = await requireAbogado(request)
+    const { usuario, error: authErr } = await requireAbogado(request)
     if (authErr) return authErr
 
     const { contrato_id, numero, monto, fecha_vencimiento } = await request.json()
+
+    const accesoErr = await verificarContrato(contrato_id, usuario!.id)
+    if (accesoErr) return accesoErr
 
     const { data, error } = await supabaseAdmin
       .from('cuotas')
       .insert({ contrato_id, numero, monto, fecha_vencimiento, estado: 'pendiente' })
       .select().single()
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    if (error) return NextResponse.json({ error: 'Error al crear la cuota' }, { status: 500 })
     return NextResponse.json({ success: true, cuota: data })
   } catch {
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })

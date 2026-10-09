@@ -7,6 +7,7 @@ import { useInactivityLogout } from '@/lib/useInactivityLogout'
 import { NuevoProspectoForm } from '@/components/NuevoProspectoForm'
 import { ProspectoModal } from '@/components/ProspectoModal'
 import { supabase } from '@/lib/supabase'
+import { authHeaders } from '@/lib/auth-headers'
 import { obtenerTimelineContrato, crearEvento, editarEvento, eliminarEvento } from '@/lib/admin'
 import { obtenerMisConsultas, responderConsulta, rechazarConsulta, type Consulta } from '@/lib/consultas'
 import {
@@ -80,7 +81,9 @@ export default function DashboardPage() {
   const [formComprobante, setFormComprobante] = useState({ comprobante: '', fecha_pago: '' })
   const [archivoPDF, setArchivoPDF] = useState<File | null>(null)
   const [guardandoComprobante, setGuardandoComprobante] = useState(false)
-  const [sesionToken, setSesionToken] = useState<string>('')
+  // Solo para NuevoProspectoForm y ProspectoModal, que reciben el token por prop.
+  // Se mantiene actualizado con onAuthStateChange; las llamadas de esta página usan authHeaders().
+  const [tokenComponentes, setTokenComponentes] = useState<string>('')
 
   // Horarios
   const [guardandoHorarios, setGuardandoHorarios] = useState(false)
@@ -126,10 +129,8 @@ export default function DashboardPage() {
         const bloqueosRes = await obtenerFechasBloqueadas(datosAbogado.id)
         setFechasBloqueadas(bloqueosRes.fechas)
 
-        setSesionToken(session.access_token)
-        const clientesRes = await fetch('/api/mis-clientes', {
-          headers: { authorization: `Bearer ${session.access_token}` }
-        })
+        setTokenComponentes(session.access_token)
+        const clientesRes = await fetch('/api/mis-clientes', { headers: await authHeaders() })
         const clientesData = await clientesRes.json()
         if (clientesData.clientes) setMisClientes(clientesData.clientes)
 
@@ -147,18 +148,14 @@ export default function DashboardPage() {
 
   useInactivityLogout(() => router.push('/login'))
 
-  async function cargarNotificaciones(token: string) {
-    const res = await fetch('/api/notificaciones', {
-      headers: { authorization: `Bearer ${token}` },
-    })
+  async function cargarNotificaciones() {
+    const res = await fetch('/api/notificaciones', { headers: await authHeaders() })
     const data = await res.json()
     if (data.notificaciones) setNotificaciones(data.notificaciones)
   }
 
-  async function cargarCantidadProspectos(token: string) {
-    const res = await fetch('/api/prospectos', {
-      headers: { authorization: `Bearer ${token}` },
-    })
+  async function cargarCantidadProspectos() {
+    const res = await fetch('/api/prospectos', { headers: await authHeaders() })
     const data = await res.json()
     if (data.prospectos) {
       setCantidadProspectos(data.prospectos.length)
@@ -169,7 +166,7 @@ export default function DashboardPage() {
   async function marcarLeida(id: number) {
     await fetch('/api/notificaciones', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
+      headers: await authHeaders(),
       body: JSON.stringify({ id }),
     })
     setNotificaciones(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n))
@@ -189,7 +186,7 @@ export default function DashboardPage() {
   async function marcarRevisado(id: number) {
     await fetch('/api/prospectos', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
+      headers: await authHeaders(),
       body: JSON.stringify({ id }),
     })
     setProspectosData(prev => prev.map(p => p.id === id ? { ...p, revisado: true } : p))
@@ -198,19 +195,28 @@ export default function DashboardPage() {
   async function marcarTodasLeidas() {
     await fetch('/api/notificaciones', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
+      headers: await authHeaders(),
       body: JSON.stringify({}),
     })
     setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })))
   }
 
+  const abogadoId = abogado?.id
   useEffect(() => {
-    if (!sesionToken) return
-    cargarNotificaciones(sesionToken)
-    cargarCantidadProspectos(sesionToken)
-    const intervalo = setInterval(() => cargarNotificaciones(sesionToken), 30000)
+    if (!abogadoId) return
+    cargarNotificaciones()
+    cargarCantidadProspectos()
+    const intervalo = setInterval(() => cargarNotificaciones(), 30000)
     return () => clearInterval(intervalo)
-  }, [sesionToken])
+  }, [abogadoId])
+
+  // Mantiene fresco el token que reciben los componentes de prospectos (supabase-js lo renueva solo)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_evento, session) => {
+      setTokenComponentes(session?.access_token ?? '')
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
     if (!dropdownNoti) return
@@ -288,7 +294,7 @@ export default function DashboardPage() {
     setAgendando(true)
     const res = await fetch('/api/crear-cita', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({
         consultaId: null,
         abogadoId: abogado.id,
@@ -410,15 +416,13 @@ export default function DashboardPage() {
 
   // --- CLIENTES ---
   async function recargarClientes() {
-    const res = await fetch('/api/mis-clientes', { headers: { authorization: `Bearer ${sesionToken}` } })
+    const res = await fetch('/api/mis-clientes', { headers: await authHeaders() })
     const data = await res.json()
     if (data.clientes) setMisClientes(data.clientes)
   }
 
   async function cargarCuotas(contratoId: number) {
-    const res = await fetch(`/api/mis-cuotas?contrato_id=${contratoId}`, {
-      headers: { authorization: `Bearer ${sesionToken}` },
-    })
+    const res = await fetch(`/api/mis-cuotas?contrato_id=${contratoId}`, { headers: await authHeaders() })
     const data = await res.json()
     setCuotasMap(prev => ({ ...prev, [contratoId]: data.cuotas ?? [] }))
   }
@@ -450,7 +454,7 @@ export default function DashboardPage() {
     setGuardandoCliente(true)
     const res = await fetch('/api/mis-clientes', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
+      headers: await authHeaders(),
       body: JSON.stringify({
         clienteExistenteId: modalContratoExistente.id,
         tipo_servicio: formContratoExistente.tipo_servicio,
@@ -511,7 +515,7 @@ export default function DashboardPage() {
     setGuardandoCliente(true)
     const res = await fetch('/api/mis-clientes', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
+      headers: await authHeaders(),
       body: JSON.stringify({ ...formCliente, monto_total: Number(formCliente.monto_total), monto_pie: Number(formCliente.monto_pie) }),
     })
     const data = await res.json()
@@ -532,7 +536,7 @@ export default function DashboardPage() {
     setGuardandoCliente(true)
     const res = await fetch('/api/mis-clientes', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
+      headers: await authHeaders(),
       body: JSON.stringify({
         contrato_id: modalEditarCliente.id,
         cliente_id: modalEditarCliente.clientes.id,
@@ -556,7 +560,7 @@ export default function DashboardPage() {
     if (!confirm('¿Eliminar este cliente y su contrato?')) return
     await fetch('/api/mis-clientes', {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
+      headers: await authHeaders(),
       body: JSON.stringify({ contrato_id: contratoId, cliente_id: clienteId }),
     })
     await recargarClientes()
@@ -570,7 +574,7 @@ export default function DashboardPage() {
     const contratoId = modalNuevaCuota.id
     const res = await fetch('/api/mis-cuotas', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
+      headers: await authHeaders(),
       body: JSON.stringify({ contrato_id: contratoId, numero: Number(formCuota.numero), monto: Number(formCuota.monto), fecha_vencimiento: formCuota.fecha_vencimiento }),
     })
     const data = await res.json()
@@ -591,7 +595,7 @@ export default function DashboardPage() {
       // Desmarcar como pagada directamente
       await fetch('/api/mis-cuotas', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
+        headers: await authHeaders(),
         body: JSON.stringify({ id: cuota.id, contrato_id: contratoId, estado: 'pendiente', fecha_pago: null, comprobante: null, monto: cuota.monto }),
       })
       await cargarCuotas(contratoId)
@@ -609,13 +613,12 @@ export default function DashboardPage() {
 
     let comprobanteUrl: string | null = null
     if (archivoPDF) {
-      const { data: { session } } = await supabase.auth.getSession()
       const fd = new FormData()
       fd.append('archivo', archivoPDF)
       fd.append('cuota_id', String(modalComprobante.cuota.id))
       const uploadRes = await fetch('/api/comprobantes', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session?.access_token}` },
+        headers: await authHeaders({ json: false }),
         body: fd,
       })
       const uploadData = await uploadRes.json()
@@ -624,7 +627,7 @@ export default function DashboardPage() {
 
     await fetch('/api/mis-cuotas', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
+      headers: await authHeaders(),
       body: JSON.stringify({
         id: modalComprobante.cuota.id,
         contrato_id: modalComprobante.contratoId,
@@ -647,7 +650,7 @@ export default function DashboardPage() {
   async function handleEliminarCuota(cuotaId: number, contratoId: number) {
     await fetch('/api/mis-cuotas', {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
+      headers: await authHeaders(),
       body: JSON.stringify({ id: cuotaId }),
     })
     await cargarCuotas(contratoId)
@@ -1423,10 +1426,10 @@ export default function DashboardPage() {
 
             {mostrarFormProspecto && (
               <NuevoProspectoForm
-                token={sesionToken}
+                token={tokenComponentes}
                 onSuccess={() => {
                   setMostrarFormProspecto(false)
-                  cargarCantidadProspectos(sesionToken)
+                  cargarCantidadProspectos()
                 }}
                 onCancel={() => setMostrarFormProspecto(false)}
               />
@@ -1617,10 +1620,10 @@ export default function DashboardPage() {
       {prospectoSeleccionado && (
         <ProspectoModal
           prospecto={prospectoSeleccionado}
-          token={sesionToken}
+          token={tokenComponentes}
           onClose={() => setProspectoSeleccionado(null)}
-          onTipificacionCreada={() => cargarCantidadProspectos(sesionToken)}
-          onEstadoCambiado={() => cargarCantidadProspectos(sesionToken)}
+          onTipificacionCreada={() => cargarCantidadProspectos()}
+          onEstadoCambiado={() => cargarCantidadProspectos()}
         />
       )}
 

@@ -1,16 +1,5 @@
 import { supabase } from './supabase'
-
-/**
- * Headers con el access token de la sesión actual, requerido por las rutas `/api/citas`.
- * `getSession()` refresca el token si expiró.
- */
-async function authHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession()
-  return {
-    'Content-Type': 'application/json',
-    ...(session ? { authorization: `Bearer ${session.access_token}` } : {}),
-  }
-}
+import { authHeaders } from './auth-headers'
 
 /**
  * Franja horaria de disponibilidad semanal de un abogado.

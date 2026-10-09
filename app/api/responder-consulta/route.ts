@@ -14,6 +14,12 @@ export async function POST(request: NextRequest) {
     const { consultaId, respuesta } = await request.json()
     const abogadoId = usuario!.id
 
+    // 0. La consulta debe existir y estar dirigida a este abogado
+    const { data: existente } = await supabaseAdmin
+      .from('consultas').select('id, abogado_id').eq('id', consultaId).maybeSingle()
+    if (!existente) return NextResponse.json({ success: false, error: 'Consulta no encontrada' }, { status: 404 })
+    if (existente.abogado_id !== abogadoId) return NextResponse.json({ success: false, error: 'Acceso denegado' }, { status: 403 })
+
     // 1. Actualizar la consulta en la base de datos
     const { data: consulta, error } = await supabaseAdmin
       .from('consultas')
@@ -24,10 +30,11 @@ export async function POST(request: NextRequest) {
         respondida_por: abogadoId,
       })
       .eq('id', consultaId)
+      .eq('abogado_id', abogadoId)
       .select()
       .single()
 
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 })
+    if (error) return NextResponse.json({ success: false, error: 'Error al guardar la respuesta' }, { status: 500 })
 
     // 2. Enviar respuesta al cliente
     resend.emails.send({
