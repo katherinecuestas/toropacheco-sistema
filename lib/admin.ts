@@ -59,6 +59,8 @@ export async function crearAbogado(datos: {
   nombre_usuario: string
   telefono?: string
   es_admin?: boolean
+  /** 'abogado' (por defecto) o 'supervisor' */
+  rol?: 'abogado' | 'supervisor'
 }) {
   const res = await fetch('/api/admin/abogados', {
     method: 'POST',

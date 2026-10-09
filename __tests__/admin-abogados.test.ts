@@ -69,3 +69,30 @@ describe('/api/admin/abogados — admin desde la tabla admins', () => {
     expect(esAdminEnTabla(creado.auth_user_id as string)).toBe(true)
   })
 })
+
+describe('POST /api/admin/abogados — rol', () => {
+  const crear = (extra: Record<string, unknown>) => llamar(POST, 'POST', TOKEN.admin, {
+    email: 'nuevo@example.com', password: 'Segura1234', nombres: 'Nuevo', ...extra,
+  })
+  const creado = () => db.usuarios.find(u => u.email === 'nuevo@example.com')
+
+  it("con rol 'supervisor' crea el usuario con ese rol", async () => {
+    expect((await crear({ rol: 'supervisor' })).status).toBe(200)
+    expect(creado()).toMatchObject({ rol: 'supervisor', estado: true })
+  })
+
+  it("sin rol crea un abogado", async () => {
+    expect((await crear({})).status).toBe(200)
+    expect(creado()!.rol).toBe('abogado')
+  })
+
+  it.each([['admin'], ['Supervisor'], [''], [123]])('400 con rol inválido (%p), sin crear nada', async (rol) => {
+    const res = await crear({ rol })
+    expect(res.status).toBe(400)
+    expect(creado()).toBeUndefined()
+  })
+
+  it('403 si quien crea no es admin', async () => {
+    expect((await llamar(POST, 'POST', TOKEN.abogado, { email: 'x@example.com', password: 'Segura1234', rol: 'supervisor' })).status).toBe(403)
+  })
+})

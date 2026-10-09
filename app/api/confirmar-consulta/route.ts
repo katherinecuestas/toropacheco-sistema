@@ -62,9 +62,18 @@ export async function POST(request: NextRequest) {
       }),
     ]).catch((err) => console.error('[confirmar-consulta] Error enviando emails:', err))
 
-    // Registrar prospecto web y notificar al supervisor
-    const { data: supervisor } = await supabaseAdmin
-      .from('usuarios').select('id').eq('rol', 'supervisor').maybeSingle()
+    // Registrar prospecto web y notificar a TODOS los supervisores activos
+    // (maybeSingle fallaba con más de un supervisor y podía elegir a uno deshabilitado)
+    const { data: supervisores } = await supabaseAdmin
+      .from('usuarios').select('id').eq('rol', 'supervisor').eq('estado', true)
+
+    const notificaciones = (supervisores ?? []).map((s: { id: number }) => ({
+      usuario_id: s.id,
+      tipo: 'prospecto',
+      titulo: `Nueva consulta web — ${nombreCliente}`,
+      mensaje: `Asunto: ${asunto} | Email: ${emailCliente} | Tel: ${telefonoCliente ?? '—'}`,
+      leida: false,
+    }))
 
     await Promise.all([
       supabaseAdmin.from('prospectos').insert({
@@ -75,13 +84,7 @@ export async function POST(request: NextRequest) {
         observacion: `Consulta web: ${asunto}`,
         creado_por: null,
       }),
-      ...(supervisor ? [supabaseAdmin.from('notificaciones').insert({
-        usuario_id: supervisor.id,
-        tipo: 'prospecto',
-        titulo: `Nueva consulta web — ${nombreCliente}`,
-        mensaje: `Asunto: ${asunto} | Email: ${emailCliente} | Tel: ${telefonoCliente ?? '—'}`,
-        leida: false,
-      })] : []),
+      ...(notificaciones.length > 0 ? [supabaseAdmin.from('notificaciones').insert(notificaciones)] : []),
     ]).catch((err) => console.error('[confirmar-consulta] Error insertando prospecto/notificación:', err))
 
     return NextResponse.json({ success: true })
