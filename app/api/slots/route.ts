@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { generarSlots } from '@/lib/helpers'
-
-const TZ = 'America/Santiago'
-
-function horaChile(fechaHora: string): string {
-  return new Intl.DateTimeFormat('en-GB', {
-    timeZone: TZ,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(new Date(fechaHora))
-}
+import { chileAUtc, partesChile } from '@/lib/zona-horaria'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -45,16 +35,28 @@ export async function GET(request: NextRequest) {
 
   const slots = generarSlots(horario.hora_inicio, horario.hora_fin)
 
+  // Rango del día en hora de Chile (no en UTC): [00:00 de ese día, 00:00 del día siguiente).
+  // El día que empieza el horario de verano las 00:00 no existen y el día parte a las 01:00.
+  const inicioDia = (f: string) => chileAUtc(`${f}T00:00`) ?? chileAUtc(`${f}T01:00`)
+  const siguiente = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10)
+  const desde = inicioDia(fechaISO)
+  const hasta = inicioDia(siguiente)
+  if (!desde || !hasta) return NextResponse.json({ slots: [] })
+
   const { data: citasOcupadas } = await supabaseAdmin
     .from('citas')
     .select('fecha_hora')
     .eq('abogado_id', abogadoId)
-    .gte('fecha_hora', `${fechaISO}T00:00:00`)
-    .lte('fecha_hora', `${fechaISO}T23:59:59+00:00`)
+    .gte('fecha_hora', desde)
+    .lt('fecha_hora', hasta)
     .neq('estado', 'cancelada')
 
+  // Se compara fecha + hora en Chile contra los bloques, que también son hora de Chile
   const horasOcupadas = new Set(
-    (citasOcupadas || []).map(c => horaChile(c.fecha_hora))
+    (citasOcupadas || [])
+      .map(c => partesChile(c.fecha_hora))
+      .filter(p => p.fecha === fechaISO)
+      .map(p => p.hora)
   )
 
   return NextResponse.json({ slots: slots.filter(s => !horasOcupadas.has(s)) })

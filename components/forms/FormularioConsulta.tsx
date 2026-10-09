@@ -76,7 +76,8 @@ export default function FormularioConsulta() {
         abogadoId: ABOGADO_ID,
         nombreCliente: video.nombre,
         emailCliente: video.email,
-        fechaHora: new Date(`${fechaVideo}T${slotSeleccionado}:00`).toISOString(),
+        // Hora de Chile sin offset: el servidor la convierte (no depende de la zona del navegador)
+        fechaHora: `${fechaVideo}T${slotSeleccionado}:00`,
       }),
     })
     const resultado = await res.json()
