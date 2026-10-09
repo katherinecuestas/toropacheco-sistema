@@ -11,6 +11,8 @@ type Filtro = (row: Row) => boolean
 
 export const db: Record<string, Row[]> = {}
 
+const instante = (v: unknown) => new Date(String(v)).getTime()
+
 /** token → auth_user_id que devuelve `auth.getUser` */
 const tokens: Record<string, string> = {}
 
@@ -31,6 +33,11 @@ class Query implements PromiseLike<{ data: unknown; error: unknown }> {
   // Comparación laxa: los ids llegan como string desde query params
   eq(col: string, valor: unknown) { this.filtros.push(r => String(r[col]) === String(valor)); return this }
   in(col: string, valores: unknown[]) { this.filtros.push(r => valores.map(String).includes(String(r[col]))); return this }
+  neq(col: string, valor: unknown) { this.filtros.push(r => String(r[col]) !== String(valor)); return this }
+  // Comparaciones de fechas como instantes (no como texto), igual que timestamptz
+  gte(col: string, valor: string) { this.filtros.push(r => instante(r[col]) >= instante(valor)); return this }
+  lt(col: string, valor: string) { this.filtros.push(r => instante(r[col]) < instante(valor)); return this }
+  lte(col: string, valor: string) { this.filtros.push(r => instante(r[col]) <= instante(valor)); return this }
   order(col: string, opts?: { ascending?: boolean }) { this.orden = { col, asc: opts?.ascending ?? true }; return this }
   limit(n: number) { this.limite = n; return this }
 

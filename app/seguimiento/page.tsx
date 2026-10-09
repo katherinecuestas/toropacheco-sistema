@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { obtenerSlotsDisponibles } from '@/lib/citas'
 import type { Consulta } from '@/lib/consultas'
 import type { Cita } from '@/lib/citas'
+import { ZONA_CHILE } from '@/lib/zona-horaria'
 
 /** Columnas de la consulta que devuelve GET /api/seguimiento */
 type ConsultaSeguimiento = Pick<Consulta,
@@ -195,7 +196,7 @@ function SeguimientoContent() {
             </h3>
             <p className="text-gray-700 font-medium">
               {new Date(cita.fecha_hora).toLocaleString('es-CL', {
-                weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+                weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: ZONA_CHILE
               })}
             </p>
             {cita.meeting_url ? (
@@ -215,7 +216,7 @@ function SeguimientoContent() {
             <h3 className="text-lg font-bold text-green-800 mb-1">¡Cita confirmada!</h3>
             <p className="text-green-700 text-sm mb-4">
               {new Date(cita.fecha_hora).toLocaleString('es-CL', {
-                weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+                weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: ZONA_CHILE
               })}
             </p>
             {cita.meeting_url ? (

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireAbogado } from '@/lib/api-auth'
+import { chileAUtc, formatearFechaHoraChile } from '@/lib/zona-horaria'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -54,11 +55,7 @@ export async function PATCH(request: NextRequest) {
 
     if (error) return NextResponse.json({ success: false, error: 'Error al confirmar la cita' }, { status: 500 })
 
-    const fechaFormateada = new Date(cita.fecha_hora).toLocaleString('es-CL', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-      timeZone: 'America/Santiago',
-    })
+    const fechaFormateada = formatearFechaHoraChile(cita.fecha_hora)
 
     await resend.emails.send({
       from: 'Toro Pacheco & Asociados <no-reply@toropachecoasociados.cl>',
@@ -102,12 +99,16 @@ export async function PUT(request: NextRequest) {
   try {
     const { id, fecha_hora, notas, estado, meeting_url } = await request.json()
 
+    // La hora editada es hora de Chile; se guarda como instante UTC con el offset de esa fecha
+    const fechaHoraUtc = fecha_hora === undefined ? undefined : chileAUtc(fecha_hora)
+    if (fechaHoraUtc === null) return NextResponse.json({ success: false, error: 'Fecha u hora inválida' }, { status: 400 })
+
     const accesoErr = await verificarCita(id, usuario!.id)
     if (accesoErr) return accesoErr
 
     const { data, error } = await supabaseAdmin
       .from('citas')
-      .update({ fecha_hora, notas, estado, meeting_url })
+      .update({ fecha_hora: fechaHoraUtc, notas, estado, meeting_url })
       .eq('id', id)
       .eq('abogado_id', usuario!.id)
       .select()

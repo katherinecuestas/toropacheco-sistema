@@ -8,6 +8,7 @@ import { NuevoProspectoForm } from '@/components/NuevoProspectoForm'
 import { ProspectoModal } from '@/components/ProspectoModal'
 import { supabase } from '@/lib/supabase'
 import { authHeaders } from '@/lib/auth-headers'
+import { partesChile } from '@/lib/zona-horaria'
 import { obtenerTimelineContrato, crearEvento, editarEvento, eliminarEvento } from '@/lib/admin'
 import { obtenerMisConsultas, responderConsulta, rechazarConsulta, type Consulta } from '@/lib/consultas'
 import {
@@ -330,9 +331,8 @@ export default function DashboardPage() {
   }
 
   function abrirEditarCita(cita: Cita) {
-    const fecha = cita.fecha_hora.split('T')[0]
-    const hora = new Date(cita.fecha_hora)
-    const slot = `${String(hora.getHours()).padStart(2, '0')}:${String(hora.getMinutes()).padStart(2, '0')}`
+    // Fecha y hora en Chile, igual que los bloques de /api/slots (no la fecha UTC ni la hora del navegador)
+    const { fecha, hora: slot } = partesChile(cita.fecha_hora)
     setCitaEditando(cita)
     setFormEditarCita({ fecha, slot, notas: cita.notas || '', estado: cita.estado, meeting_url: cita.meeting_url || '' })
     setSlotsEditar([slot])

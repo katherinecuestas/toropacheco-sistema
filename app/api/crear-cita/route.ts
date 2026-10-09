@@ -2,6 +2,7 @@ import { Resend } from 'resend'
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { requireAbogado } from '@/lib/api-auth'
+import { chileAUtc, formatearFechaHoraChile } from '@/lib/zona-horaria'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -16,6 +17,12 @@ export async function POST(request: NextRequest) {
       if (authErr) return authErr
     }
 
+    // La hora elegida es hora de Chile; se guarda como instante UTC con el offset de esa fecha
+    const fechaHoraUtc = chileAUtc(fechaHora)
+    if (!fechaHoraUtc) {
+      return NextResponse.json({ success: false, error: 'Fecha u hora inválida' }, { status: 400 })
+    }
+
     // 1. Guardar cita en Supabase
     const { data: cita, error: citaError } = await supabaseAdmin
       .from('citas')
@@ -24,7 +31,7 @@ export async function POST(request: NextRequest) {
         abogado_id: abogadoId,
         nombre_cliente: nombreCliente,
         email_cliente: emailCliente,
-        fecha_hora: fechaHora,
+        fecha_hora: fechaHoraUtc,
         estado: creadaPorAbogado ? 'confirmada' : 'pendiente',
         ...(meetingUrl ? { meeting_url: meetingUrl } : {}),
       })
@@ -35,11 +42,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: citaError.message }, { status: 400 })
     }
 
-    const fechaFormateada = new Date(fechaHora).toLocaleString('es-CL', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-      timeZone: 'America/Santiago',
-    })
+    const fechaFormateada = formatearFechaHoraChile(fechaHoraUtc)
 
     // Emails: no-fatal — la cita ya fue creada aunque fallen
     const emailCliente_html = creadaPorAbogado
