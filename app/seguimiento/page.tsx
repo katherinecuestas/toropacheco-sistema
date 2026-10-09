@@ -2,16 +2,23 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { obtenerSlotsDisponibles, obtenerCitaPorConsulta } from '@/lib/citas'
+import { obtenerSlotsDisponibles } from '@/lib/citas'
 import type { Consulta } from '@/lib/consultas'
 import type { Cita } from '@/lib/citas'
+
+/** Columnas de la consulta que devuelve GET /api/seguimiento */
+type ConsultaSeguimiento = Pick<Consulta,
+  'id' | 'abogado_id' | 'nombre_cliente' | 'email_cliente' | 'asunto' | 'mensaje' |
+  'estado' | 'respuesta' | 'respondida_en' | 'created_at'>
+
+/** Columnas de la cita que usa esta página */
+type CitaSeguimiento = Pick<Cita, 'fecha_hora' | 'meeting_url'>
 
 function SeguimientoContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
-  const [consulta, setConsulta] = useState<Consulta | null>(null)
-  const [cita, setCita] = useState<Cita | null>(null)
+  const [consulta, setConsulta] = useState<ConsultaSeguimiento | null>(null)
+  const [cita, setCita] = useState<CitaSeguimiento | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -31,22 +38,19 @@ function SeguimientoContent() {
         return
       }
 
-      const { data, error } = await supabase
-        .from('consultas')
-        .select('*')
-        .eq('token', token)
-        .single()
-
-      if (error || !data) {
-        setError('No se encontró la consulta. Verifica el enlace.')
-        setLoading(false)
-        return
+      try {
+        const res = await fetch(`/api/seguimiento?token=${encodeURIComponent(token)}`)
+        if (!res.ok) {
+          setError('No se encontró la consulta. Verifica el enlace.')
+          setLoading(false)
+          return
+        }
+        const data = await res.json()
+        setConsulta(data.consulta)
+        if (data.cita) setCita(data.cita)
+      } catch {
+        setError('No se pudo cargar la consulta. Intenta nuevamente.')
       }
-
-      setConsulta(data as Consulta)
-
-      const { cita: citaExistente } = await obtenerCitaPorConsulta(data.id)
-      if (citaExistente) setCita(citaExistente)
 
       setLoading(false)
     }

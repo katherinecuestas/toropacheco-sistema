@@ -175,22 +175,3 @@ export async function cancelarCita(id: number) {
   })
   return res.json()
 }
-
-/**
- * Obtiene la cita más reciente asociada a una consulta.
- * Útil para mostrar el estado de agendamiento desde la vista de la consulta.
- *
- * @param consultaId - ID de la consulta origen
- */
-export async function obtenerCitaPorConsulta(consultaId: number) {
-  const { data, error } = await supabase
-    .from('citas')
-    .select('*')
-    .eq('consulta_id', consultaId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
-  if (error) return { cita: null }
-  return { cita: data as Cita }
-}
