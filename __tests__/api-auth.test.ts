@@ -3,16 +3,24 @@ import { requireAuth, requireAdmin, requireSupervisor, requireAbogado } from '..
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
 const mockGetUser = jest.fn()
+const mockFrom = jest.fn()
 const mockSelect = jest.fn()
 const mockEq = jest.fn()
-const mockMaybeSingle = jest.fn()
+/** Fila que devuelve maybeSingle() por tabla (usuarios, admins) */
+const mockFilas: Record<string, unknown> = {}
 
 jest.mock('../lib/supabase-admin', () => ({
   supabaseAdmin: {
     auth: { getUser: (...args: unknown[]) => mockGetUser(...args) },
-    from: () => ({
-      select: (...args: unknown[]) => { mockSelect(...args); return { eq: mockEq } },
-    }),
+    from: (tabla: string) => {
+      mockFrom(tabla)
+      const q = {
+        select: (...args: unknown[]) => { mockSelect(tabla, ...args); return q },
+        eq: (...args: unknown[]) => { mockEq(tabla, ...args); return q },
+        maybeSingle: async () => ({ data: mockFilas[tabla] ?? null }),
+      }
+      return q
+    },
   },
 }))
 
@@ -31,17 +39,23 @@ function buildRequest(token?: string): Request {
   } as unknown as Request
 }
 
-function setupSupabase(authUser: { id: string } | null, usuarioRow: Record<string, unknown> | null) {
+function setupSupabase(
+  authUser: { id: string } | null,
+  usuarioRow: Record<string, unknown> | null,
+  adminRow: Record<string, unknown> | null = null,
+) {
   mockGetUser.mockResolvedValue({ data: { user: authUser } })
-  mockEq.mockReturnValue({ eq: mockEq, maybeSingle: () => mockMaybeSingle() })
-  mockMaybeSingle.mockResolvedValue({ data: usuarioRow })
+  mockFilas.usuarios = usuarioRow
+  mockFilas.admins = adminRow
 }
 
-const usuarioAbogado = { id: 1, rol: 'abogado', is_admin: false, nombres: 'Test', nombre_negocio: null }
-const usuarioAdmin   = { id: 2, rol: 'abogado', is_admin: true,  nombres: 'Admin', nombre_negocio: null }
-const usuarioSup     = { id: 3, rol: 'supervisor', is_admin: false, nombres: 'Sup', nombre_negocio: null }
+const usuarioAbogado = { id: 1, rol: 'abogado', nombres: 'Test', nombre_negocio: null }
+const usuarioSup     = { id: 3, rol: 'supervisor', nombres: 'Sup', nombre_negocio: null }
 
-beforeEach(() => jest.clearAllMocks())
+beforeEach(() => {
+  jest.clearAllMocks()
+  for (const k of Object.keys(mockFilas)) delete mockFilas[k]
+})
 
 // ─── requireAuth ─────────────────────────────────────────────────────────────
 
@@ -79,7 +93,6 @@ describe('requireAuth()', () => {
 
 describe('guards de rol sin sesión válida', () => {
   it.each([
-    ['requireAdmin', requireAdmin],
     ['requireSupervisor', requireSupervisor],
     ['requireAbogado', requireAbogado],
   ])('%s devuelve 401 (no 403) si no hay token', async (_nombre, guard) => {
@@ -89,7 +102,6 @@ describe('guards de rol sin sesión válida', () => {
   })
 
   it.each([
-    ['requireAdmin', requireAdmin],
     ['requireSupervisor', requireSupervisor],
     ['requireAbogado', requireAbogado],
   ])('%s devuelve 401 si Supabase no reconoce el token', async (_nombre, guard) => {
@@ -99,19 +111,52 @@ describe('guards de rol sin sesión válida', () => {
   })
 })
 
-describe('requireAdmin()', () => {
-  it('devuelve 403 para abogado sin is_admin', async () => {
-    setupSupabase({ id: 'uuid-a' }, usuarioAbogado)
-    const { usuario, error } = await requireAdmin(buildRequest('tok'))
-    expect(usuario).toBeNull()
+describe('requireAdmin() — fuente de verdad: tabla admins', () => {
+  it('401 sin token, sin consultar la base', async () => {
+    const { admin, error } = await requireAdmin(buildRequest())
+    expect(admin).toBeNull()
+    expect((error as { status: number }).status).toBe(401)
+    expect(mockFrom).not.toHaveBeenCalled()
+  })
+
+  it('401 si Supabase no reconoce el token', async () => {
+    setupSupabase(null, null)
+    const { error } = await requireAdmin(buildRequest('token-invalido'))
+    expect((error as { status: number }).status).toBe(401)
+  })
+
+  it('403 para abogado sin fila en admins', async () => {
+    setupSupabase({ id: 'uuid-a' }, usuarioAbogado, null)
+    const { admin, error } = await requireAdmin(buildRequest('tok'))
+    expect(admin).toBeNull()
     expect((error as { status: number }).status).toBe(403)
   })
 
-  it('devuelve usuario para admin', async () => {
-    setupSupabase({ id: 'uuid-b' }, usuarioAdmin)
-    const { usuario, error } = await requireAdmin(buildRequest('tok'))
+  it('403 aunque la fila de usuarios diga is_admin = true (la columna ya no se usa)', async () => {
+    setupSupabase({ id: 'uuid-a' }, { ...usuarioAbogado, is_admin: true }, null)
+    const { error } = await requireAdmin(buildRequest('tok'))
+    expect((error as { status: number }).status).toBe(403)
+  })
+
+  it('pasa (sin error) para un admin que solo existe en la tabla admins', async () => {
+    setupSupabase({ id: 'uuid-admin' }, null, { id: 1 })
+    const { admin, error } = await requireAdmin(buildRequest('tok'))
     expect(error).toBeNull()
-    expect(usuario?.is_admin).toBe(true)
+    expect(admin).toEqual({ auth_user_id: 'uuid-admin' })
+  })
+
+  it('pasa para un abogado que además tiene fila en admins', async () => {
+    setupSupabase({ id: 'uuid-a' }, usuarioAbogado, { id: 2 })
+    const { error } = await requireAdmin(buildRequest('tok'))
+    expect(error).toBeNull()
+  })
+
+  it('consulta admins por auth_user_id y no lee la tabla usuarios', async () => {
+    setupSupabase({ id: 'uuid-admin' }, null, { id: 1 })
+    await requireAdmin(buildRequest('tok'))
+    expect(mockFrom).toHaveBeenCalledWith('admins')
+    expect(mockFrom).not.toHaveBeenCalledWith('usuarios')
+    expect(mockEq).toHaveBeenCalledWith('admins', 'auth_user_id', 'uuid-admin')
   })
 })
 

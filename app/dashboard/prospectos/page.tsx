@@ -58,7 +58,7 @@ export default function ProspectosPage() {
 
       const { data: u } = await supabase
         .from('usuarios')
-        .select('id, nombres, nombre_negocio, email, is_admin, rol')
+        .select('id, nombres, nombre_negocio, email, rol')
         .eq('auth_user_id', session.user.id)
         .maybeSingle()
 

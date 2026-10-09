@@ -16,7 +16,7 @@ export interface Usuario {
   nombre_negocio: string
   telefono?: string
   estado: boolean
-  is_admin: boolean
+  es_admin: boolean
   rol?: string
 }
 
@@ -34,7 +34,7 @@ export async function verificarAdmin(): Promise<boolean> {
 }
 
 export async function obtenerTodosAbogados() {
-  const res = await fetch('/api/admin/abogados')
+  const res = await fetch('/api/admin/abogados', { headers: await authHeaders() })
   return res.json()
 }
 
@@ -58,11 +58,11 @@ export async function crearAbogado(datos: {
   dv?: string
   nombre_usuario: string
   telefono?: string
-  is_admin?: boolean
+  es_admin?: boolean
 }) {
   const res = await fetch('/api/admin/abogados', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(datos),
   })
   return res.json()
@@ -79,12 +79,12 @@ export async function editarAbogado(datos: {
   dv?: string
   nombre_usuario: string
   telefono?: string
-  is_admin: boolean
+  es_admin: boolean
   estado: boolean
 }) {
   const res = await fetch('/api/admin/abogados', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(datos),
   })
   return res.json()
@@ -93,7 +93,7 @@ export async function editarAbogado(datos: {
 export async function toggleEstadoAbogadoAdmin(id: number, auth_user_id: string, estado: boolean) {
   const res = await fetch('/api/admin/abogados', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({ id, auth_user_id, action: 'toggle-estado', estado }),
   })
   return res.json()
@@ -102,7 +102,7 @@ export async function toggleEstadoAbogadoAdmin(id: number, auth_user_id: string,
 export async function cambiarPasswordAbogado(auth_user_id: string, password: string) {
   const res = await fetch('/api/admin/abogados', {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({ auth_user_id, action: 'cambiar-password', password }),
   })
   return res.json()
@@ -111,7 +111,7 @@ export async function cambiarPasswordAbogado(auth_user_id: string, password: str
 export async function eliminarAbogado(id: number, auth_user_id: string) {
   const res = await fetch('/api/admin/abogados', {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({ id, auth_user_id }),
   })
   return res.json()
@@ -168,14 +168,14 @@ export async function obtenerTodasConsultas() {
 
 // --- CLIENTES ---
 export async function obtenerTodosClientes() {
-  const res = await fetch('/api/admin/clientes')
+  const res = await fetch('/api/admin/clientes', { headers: await authHeaders() })
   return res.json()
 }
 
 export async function eliminarCliente(id: number, auth_user_id: string) {
   const res = await fetch('/api/admin/clientes', {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({ id, auth_user_id }),
   })
   return res.json()
@@ -183,7 +183,7 @@ export async function eliminarCliente(id: number, auth_user_id: string) {
 
 // --- CONTRATOS ---
 export async function obtenerContratosCliente(clienteId: number) {
-  const res = await fetch(`/api/admin/contratos?cliente_id=${clienteId}`)
+  const res = await fetch(`/api/admin/contratos?cliente_id=${clienteId}`, { headers: await authHeaders() })
   return res.json()
 }
 
@@ -199,7 +199,7 @@ export async function crearContrato(datos: {
 }) {
   const res = await fetch('/api/admin/contratos', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(datos),
   })
   return res.json()
@@ -216,7 +216,7 @@ export async function editarContrato(datos: {
 }) {
   const res = await fetch('/api/admin/contratos', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(datos),
   })
   return res.json()
@@ -225,7 +225,7 @@ export async function editarContrato(datos: {
 export async function eliminarContrato(id: number) {
   const res = await fetch('/api/admin/contratos', {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({ id }),
   })
   return res.json()
@@ -233,14 +233,14 @@ export async function eliminarContrato(id: number) {
 
 // --- CUOTAS ---
 export async function obtenerCuotasContrato(contratoId: number) {
-  const res = await fetch(`/api/admin/cuotas?contrato_id=${contratoId}`)
+  const res = await fetch(`/api/admin/cuotas?contrato_id=${contratoId}`, { headers: await authHeaders() })
   return res.json()
 }
 
 export async function crearCuota(datos: { contrato_id: number; numero: number; monto: number; fecha_vencimiento: string }) {
   const res = await fetch('/api/admin/cuotas', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(datos),
   })
   return res.json()
@@ -249,7 +249,7 @@ export async function crearCuota(datos: { contrato_id: number; numero: number; m
 export async function editarCuota(datos: { id: number; monto: number; fecha_vencimiento: string; fecha_pago?: string; estado: string }) {
   const res = await fetch('/api/admin/cuotas', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(datos),
   })
   return res.json()
@@ -258,7 +258,7 @@ export async function editarCuota(datos: { id: number; monto: number; fecha_venc
 export async function eliminarCuota(id: number) {
   const res = await fetch('/api/admin/cuotas', {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({ id }),
   })
   return res.json()
@@ -266,14 +266,14 @@ export async function eliminarCuota(id: number) {
 
 // --- TIMELINE ---
 export async function obtenerTimelineContrato(contratoId: number) {
-  const res = await fetch(`/api/admin/timeline?contrato_id=${contratoId}`)
+  const res = await fetch(`/api/admin/timeline?contrato_id=${contratoId}`, { headers: await authHeaders() })
   return res.json()
 }
 
 export async function crearEvento(datos: { contrato_id: number; titulo: string; descripcion?: string; fecha: string; completado?: boolean }) {
   const res = await fetch('/api/admin/timeline', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(datos),
   })
   return res.json()
@@ -282,7 +282,7 @@ export async function crearEvento(datos: { contrato_id: number; titulo: string; 
 export async function editarEvento(datos: { id: number; titulo: string; descripcion?: string; fecha: string; completado: boolean }) {
   const res = await fetch('/api/admin/timeline', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(datos),
   })
   return res.json()
@@ -291,13 +291,13 @@ export async function editarEvento(datos: { id: number; titulo: string; descripc
 export async function eliminarEvento(id: number) {
   const res = await fetch('/api/admin/timeline', {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({ id }),
   })
   return res.json()
 }
 
 export async function obtenerEstadisticas() {
-  const res = await fetch('/api/admin/stats')
+  const res = await fetch('/api/admin/stats', { headers: await authHeaders() })
   return res.json()
 }

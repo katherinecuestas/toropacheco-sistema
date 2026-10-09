@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/api-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
+/**
+ * Da o quita acceso de administrador. La única fuente de verdad es la tabla `admins`;
+ * la columna `usuarios.is_admin` ya no se lee ni se escribe.
+ */
+async function sincronizarAdmin(authUserId: string, esAdmin: boolean) {
+  const { data: existente } = await supabaseAdmin
+    .from('admins').select('id').eq('auth_user_id', authUserId).maybeSingle()
+  if (esAdmin && !existente) {
+    const { error } = await supabaseAdmin.from('admins').insert({ auth_user_id: authUserId })
+    return !error
+  }
+  if (!esAdmin && existente) {
+    const { error } = await supabaseAdmin.from('admins').delete().eq('auth_user_id', authUserId)
+    return !error
+  }
+  return true
+}
+
 // GET → listar todos los abogados
 export async function GET(request: Request) {
   const { error } = await requireAdmin(request)
@@ -14,7 +32,16 @@ export async function GET(request: Request) {
       .order('created_at', { ascending: false })
 
     if (dbError) return NextResponse.json({ abogados: null, error: dbError.message }, { status: 400 })
-    return NextResponse.json({ abogados: data })
+
+    // es_admin se calcula desde la tabla admins; la columna usuarios.is_admin no se expone
+    const { data: admins } = await supabaseAdmin.from('admins').select('auth_user_id')
+    const idsAdmin = new Set((admins ?? []).map((a: { auth_user_id: string }) => a.auth_user_id))
+    const abogados = (data ?? []).map((fila: Record<string, unknown>) => {
+      const u: Record<string, unknown> = { ...fila, es_admin: idsAdmin.has(fila.auth_user_id as string) }
+      delete u.is_admin
+      return u
+    })
+    return NextResponse.json({ abogados })
   } catch {
     return NextResponse.json({ abogados: null, error: 'Error interno' }, { status: 500 })
   }
@@ -26,7 +53,7 @@ export async function POST(request: NextRequest) {
   if (authError) return authError
 
   try {
-    const { email, password, nombres, apellido_paterno, apellido_materno, rut, dv, nombre_usuario, telefono, is_admin } = await request.json()
+    const { email, password, nombres, apellido_paterno, apellido_materno, rut, dv, nombre_usuario, telefono, es_admin } = await request.json()
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -54,7 +81,6 @@ export async function POST(request: NextRequest) {
         nombre: nombreCompleto || null,
         nombre_negocio: nombreCompleto || '',
         telefono: telefono || null,
-        is_admin: is_admin ?? false,
         estado: true,
       })
       .select()
@@ -65,7 +91,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: dbError.message }, { status: 400 })
     }
 
-    return NextResponse.json({ success: true, abogado })
+    if (es_admin === true && !(await sincronizarAdmin(authData.user.id, true))) {
+      await supabaseAdmin.from('usuarios').delete().eq('id', abogado.id)
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+      return NextResponse.json({ success: false, error: 'No se pudo dar acceso de administrador' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, abogado: { ...abogado, es_admin: es_admin === true } })
   } catch {
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 })
   }
@@ -73,11 +105,16 @@ export async function POST(request: NextRequest) {
 
 // PUT → editar abogado
 export async function PUT(request: NextRequest) {
-  const { error: authError } = await requireAdmin(request)
+  const { admin, error: authError } = await requireAdmin(request)
   if (authError) return authError
 
   try {
-    const { id, auth_user_id, email, nombres, apellido_paterno, apellido_materno, rut, dv, nombre_usuario, telefono, is_admin, estado } = await request.json()
+    const { id, auth_user_id, email, nombres, apellido_paterno, apellido_materno, rut, dv, nombre_usuario, telefono, es_admin, estado } = await request.json()
+
+    // Evita que un admin se quite su propio acceso y quede fuera del panel
+    if (es_admin === false && auth_user_id === admin!.auth_user_id) {
+      return NextResponse.json({ success: false, error: 'No puedes quitarte tu propio acceso de administrador' }, { status: 400 })
+    }
 
     if (email && auth_user_id) {
       const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(auth_user_id, { email })
@@ -98,7 +135,6 @@ export async function PUT(request: NextRequest) {
         nombre: nombreCompleto || null,
         nombre_negocio: nombreCompleto || '',
         telefono: telefono || null,
-        is_admin,
         estado,
         ...(email && { email }),
       })
@@ -107,7 +143,12 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 })
-    return NextResponse.json({ success: true, abogado: data })
+
+    if (typeof es_admin === 'boolean' && auth_user_id && !(await sincronizarAdmin(auth_user_id, es_admin))) {
+      return NextResponse.json({ success: false, error: 'No se pudo actualizar el acceso de administrador' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, abogado: { ...data, es_admin } })
   } catch {
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 })
   }
