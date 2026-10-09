@@ -117,7 +117,7 @@ export default function DashboardPage() {
       if (datosAbogado) {
         const [consultasRes, citasRes, disponRes] = await Promise.all([
           obtenerMisConsultas(),
-          obtenerMisCitas(datosAbogado.id),
+          obtenerMisCitas(),
           obtenerDisponibilidad(datosAbogado.id),
         ])
         if (consultasRes.consultas) setConsultas(consultasRes.consultas)
@@ -305,7 +305,7 @@ export default function DashboardPage() {
       setModalNuevaCita(false)
       setFormNuevaCita({ nombre: '', email: '', fecha: '', slot: '', meeting_url: '' })
       setSlotsNueva([])
-      const { citas: nuevasCitas } = await obtenerMisCitas(abogado.id)
+      const { citas: nuevasCitas } = await obtenerMisCitas()
       if (nuevasCitas) setCitas(nuevasCitas)
     } else {
       mostrarMensaje('error', resultado.error || 'Error al agendar.')
@@ -345,7 +345,7 @@ export default function DashboardPage() {
     if (result.success) {
       mostrarMensaje('exito', 'Cita actualizada.')
       setCitaEditando(null)
-      const { citas: nuevasCitas } = await obtenerMisCitas(abogado.id)
+      const { citas: nuevasCitas } = await obtenerMisCitas()
       if (nuevasCitas) setCitas(nuevasCitas)
     } else {
       mostrarMensaje('error', result.error || 'Error al editar.')
@@ -358,7 +358,7 @@ export default function DashboardPage() {
     const result = await confirmarCita(cita.id)
     if (result.success) {
       mostrarMensaje('exito', `Cita confirmada. Se envió correo a ${cita.email_cliente}.`)
-      const { citas: nuevasCitas } = await obtenerMisCitas(abogado.id)
+      const { citas: nuevasCitas } = await obtenerMisCitas()
       if (nuevasCitas) setCitas(nuevasCitas)
     } else {
       mostrarMensaje('error', result.error || 'Error al confirmar.')
@@ -373,7 +373,7 @@ export default function DashboardPage() {
     if (result.success) {
       mostrarMensaje('exito', 'Cita cancelada.')
       setConfirmarCancelar(null)
-      const { citas: nuevasCitas } = await obtenerMisCitas(abogado.id)
+      const { citas: nuevasCitas } = await obtenerMisCitas()
       if (nuevasCitas) setCitas(nuevasCitas)
     } else {
       mostrarMensaje('error', result.error || 'Error al cancelar.')
@@ -416,7 +416,9 @@ export default function DashboardPage() {
   }
 
   async function cargarCuotas(contratoId: number) {
-    const res = await fetch(`/api/mis-cuotas?contrato_id=${contratoId}`)
+    const res = await fetch(`/api/mis-cuotas?contrato_id=${contratoId}`, {
+      headers: { authorization: `Bearer ${sesionToken}` },
+    })
     const data = await res.json()
     setCuotasMap(prev => ({ ...prev, [contratoId]: data.cuotas ?? [] }))
   }
@@ -568,7 +570,7 @@ export default function DashboardPage() {
     const contratoId = modalNuevaCuota.id
     const res = await fetch('/api/mis-cuotas', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
       body: JSON.stringify({ contrato_id: contratoId, numero: Number(formCuota.numero), monto: Number(formCuota.monto), fecha_vencimiento: formCuota.fecha_vencimiento }),
     })
     const data = await res.json()
@@ -589,7 +591,7 @@ export default function DashboardPage() {
       // Desmarcar como pagada directamente
       await fetch('/api/mis-cuotas', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
         body: JSON.stringify({ id: cuota.id, contrato_id: contratoId, estado: 'pendiente', fecha_pago: null, comprobante: null, monto: cuota.monto }),
       })
       await cargarCuotas(contratoId)
@@ -622,7 +624,7 @@ export default function DashboardPage() {
 
     await fetch('/api/mis-cuotas', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
       body: JSON.stringify({
         id: modalComprobante.cuota.id,
         contrato_id: modalComprobante.contratoId,
@@ -645,7 +647,7 @@ export default function DashboardPage() {
   async function handleEliminarCuota(cuotaId: number, contratoId: number) {
     await fetch('/api/mis-cuotas', {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', authorization: `Bearer ${sesionToken}` },
       body: JSON.stringify({ id: cuotaId }),
     })
     await cargarCuotas(contratoId)

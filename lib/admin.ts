@@ -1,5 +1,17 @@
 import { supabase } from './supabase'
 
+/**
+ * Headers con el access token de la sesión actual, requerido por las rutas `/api/admin/*`.
+ * `getSession()` refresca el token si expiró.
+ */
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession()
+  return {
+    'Content-Type': 'application/json',
+    ...(session ? { authorization: `Bearer ${session.access_token}` } : {}),
+  }
+}
+
 export interface Usuario {
   id: number
   created_at: string
@@ -127,7 +139,7 @@ export async function crearConsulta(datos: {
 }) {
   const res = await fetch('/api/admin/consultas', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(datos),
   })
   return res.json()
@@ -145,7 +157,7 @@ export async function editarConsulta(datos: {
 }) {
   const res = await fetch('/api/admin/consultas', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify(datos),
   })
   return res.json()
@@ -154,14 +166,14 @@ export async function editarConsulta(datos: {
 export async function eliminarConsulta(id: number) {
   const res = await fetch('/api/admin/consultas', {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders(),
     body: JSON.stringify({ id }),
   })
   return res.json()
 }
 
 export async function obtenerTodasConsultas() {
-  const res = await fetch('/api/admin/consultas')
+  const res = await fetch('/api/admin/consultas', { headers: await authHeaders() })
   return res.json()
 }
 

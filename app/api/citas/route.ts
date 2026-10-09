@@ -5,39 +5,54 @@ import { requireAbogado } from '@/lib/api-auth'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-// GET → listar citas del abogado (bypasea RLS)
+/**
+ * Verifica que la cita exista y pertenezca al abogado.
+ * Devuelve `null` si tiene acceso, o la respuesta 404/403 correspondiente.
+ */
+async function verificarCita(id: unknown, abogadoId: number) {
+  const { data: cita } = await supabaseAdmin
+    .from('citas').select('id, abogado_id').eq('id', id).maybeSingle()
+  if (!cita) return NextResponse.json({ success: false, error: 'Cita no encontrada' }, { status: 404 })
+  if (cita.abogado_id !== abogadoId) return NextResponse.json({ success: false, error: 'Acceso denegado' }, { status: 403 })
+  return null
+}
+
+// GET → listar citas del abogado autenticado (el abogado_id de la query se ignora)
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const abogadoId = Number(searchParams.get('abogado_id'))
-  if (!abogadoId) return NextResponse.json({ citas: [] })
+  const { usuario, error: authErr } = await requireAbogado(request)
+  if (authErr) return authErr
 
   const { data, error } = await supabaseAdmin
     .from('citas')
     .select('*')
-    .eq('abogado_id', abogadoId)
+    .eq('abogado_id', usuario!.id)
     .order('fecha_hora', { ascending: true })
 
-  if (error) return NextResponse.json({ citas: [], error: error.message })
+  if (error) return NextResponse.json({ citas: [], error: 'Error al obtener citas' }, { status: 500 })
   return NextResponse.json({ citas: data })
 }
 
-// PATCH → confirmar cita y enviar email al cliente (solo abogados)
+// PATCH → confirmar cita y enviar email al cliente (solo el abogado dueño)
 export async function PATCH(request: NextRequest) {
-  const { error: authErr } = await requireAbogado(request)
+  const { usuario, error: authErr } = await requireAbogado(request)
   if (authErr) return authErr
 
   try {
     const { id, action } = await request.json()
     if (action !== 'confirmar') return NextResponse.json({ success: false, error: 'Acción desconocida' }, { status: 400 })
 
+    const accesoErr = await verificarCita(id, usuario!.id)
+    if (accesoErr) return accesoErr
+
     const { data: cita, error } = await supabaseAdmin
       .from('citas')
       .update({ estado: 'confirmada' })
       .eq('id', id)
+      .eq('abogado_id', usuario!.id)
       .select()
       .single()
 
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 })
+    if (error) return NextResponse.json({ success: false, error: 'Error al confirmar la cita' }, { status: 500 })
 
     const fechaFormateada = new Date(cita.fecha_hora).toLocaleString('es-CL', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -79,35 +94,44 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// PUT → editar cita (fecha, notas, estado, meeting_url) (solo abogados)
+// PUT → editar cita (fecha, notas, estado, meeting_url) (solo el abogado dueño)
 export async function PUT(request: NextRequest) {
-  const { error: authErr } = await requireAbogado(request)
+  const { usuario, error: authErr } = await requireAbogado(request)
   if (authErr) return authErr
 
   try {
     const { id, fecha_hora, notas, estado, meeting_url } = await request.json()
+
+    const accesoErr = await verificarCita(id, usuario!.id)
+    if (accesoErr) return accesoErr
+
     const { data, error } = await supabaseAdmin
       .from('citas')
       .update({ fecha_hora, notas, estado, meeting_url })
       .eq('id', id)
+      .eq('abogado_id', usuario!.id)
       .select()
       .single()
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 })
+    if (error) return NextResponse.json({ success: false, error: 'Error al actualizar la cita' }, { status: 500 })
     return NextResponse.json({ success: true, cita: data })
   } catch {
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 })
   }
 }
 
-// DELETE → cancelar cita (solo abogados)
+// DELETE → cancelar cita (solo el abogado dueño)
 export async function DELETE(request: NextRequest) {
-  const { error: authErr } = await requireAbogado(request)
+  const { usuario, error: authErr } = await requireAbogado(request)
   if (authErr) return authErr
 
   try {
     const { id } = await request.json()
-    const { error } = await supabaseAdmin.from('citas').update({ estado: 'cancelada' }).eq('id', id)
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 400 })
+
+    const accesoErr = await verificarCita(id, usuario!.id)
+    if (accesoErr) return accesoErr
+
+    const { error } = await supabaseAdmin.from('citas').update({ estado: 'cancelada' }).eq('id', id).eq('abogado_id', usuario!.id)
+    if (error) return NextResponse.json({ success: false, error: 'Error al cancelar la cita' }, { status: 500 })
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 })
