@@ -11,6 +11,70 @@ type Filtro = (row: Row) => boolean
 
 export const db: Record<string, Row[]> = {}
 
+/**
+ * Esquema de una tabla en la base falsa.
+ * - `columnas`: todas las columnas que existen.
+ * - `obligatorias`: NOT NULL sin valor por defecto (un insert debe traerlas con valor).
+ */
+export type Esquema = { columnas: string[]; obligatorias: string[] }
+
+/**
+ * Esquema REAL de public.usuarios en producción (column_name, is_nullable):
+ *   id NO · created_at NO · auth_user_id NO · email NO · telefono YES · estado NO ·
+ *   nombre_negocio NO · is_admin YES · nombres YES · apellido_paterno YES · apellido_materno YES ·
+ *   rut YES · dv YES · nombre_usuario YES · rol YES
+ * id y created_at son NOT NULL pero tienen valor por defecto, así que no son obligatorias en un insert.
+ * NO existe la columna "nombre".
+ */
+export const ESQUEMA_USUARIOS: Esquema = {
+  columnas: [
+    'id', 'created_at', 'auth_user_id', 'email', 'telefono', 'estado', 'nombre_negocio', 'is_admin',
+    'nombres', 'apellido_paterno', 'apellido_materno', 'rut', 'dv', 'nombre_usuario', 'rol',
+  ],
+  obligatorias: ['auth_user_id', 'email', 'estado', 'nombre_negocio'],
+}
+
+/**
+ * Esquemas por tabla. Con esquema, insert/update con una columna desconocida falla igual que
+ * PostgREST ("Could not find the 'x' column ... in the schema cache"), y dejar una columna
+ * NOT NULL sin valor falla como Postgres (23502). Las tablas sin esquema aceptan cualquier columna.
+ * `resetDb()` deja configurado el de `usuarios`.
+ */
+export const esquemas: Record<string, Esquema> = {}
+
+/** supabase-js serializa a JSON: las claves con valor `undefined` no se envían. */
+const sinUndefined = (fila: Row): Row =>
+  Object.fromEntries(Object.entries(fila).filter(([, v]) => v !== undefined))
+
+const sinValor = (v: unknown) => v === null || v === undefined || v === ''
+
+/** Valida filas contra el esquema de la tabla. Devuelve el error de PostgREST/Postgres, o null. */
+function validarEsquema(tabla: string, filas: Row[], esInsert: boolean) {
+  const esquema = esquemas[tabla]
+  if (!esquema) return null
+  const desconocida = filas.flatMap(f => Object.keys(f)).find(c => !esquema.columnas.includes(c))
+  if (desconocida) {
+    return { message: `Could not find the '${desconocida}' column of '${tabla}' in the schema cache`, code: 'PGRST204' }
+  }
+  for (const fila of filas) {
+    // Insert: toda obligatoria debe venir con valor. Update: solo se revisan las que se envían.
+    const faltante = esquema.obligatorias.find(c => (esInsert || c in fila) && sinValor(fila[c]))
+    if (faltante) {
+      return { message: `null value in column "${faltante}" of relation "${tabla}" violates not-null constraint`, code: '23502' }
+    }
+  }
+  return null
+}
+
+/** Tablas cuyo próximo insert debe fallar (simula un error de la base). */
+export const fallarInsert = new Set<string>()
+
+/** Tablas cuyo próximo update debe fallar (simula un error de la base). */
+export const fallarUpdate = new Set<string>()
+
+/** Cuentas de Supabase Auth creadas con auth.admin.createUser y aún no borradas. */
+export const cuentasAuth: { id: string; email: string }[] = []
+
 const instante = (v: unknown) => new Date(String(v)).getTime()
 
 /** token → auth_user_id que devuelve `auth.getUser` */
@@ -53,15 +117,27 @@ class Query implements PromiseLike<{ data: unknown; error: unknown }> {
     let filas: Row[]
 
     if (this.op === 'insert') {
-      const nuevas = (Array.isArray(this.payload) ? this.payload : [this.payload!]).map(v => ({
+      const filasNuevas = (Array.isArray(this.payload) ? this.payload : [this.payload!]).map(sinUndefined)
+      if (fallarInsert.delete(this.tabla)) {
+        return { data: null, error: { message: `fallo simulado en ${this.tabla}`, code: 'XX000' } }
+      }
+      const errorEsquema = validarEsquema(this.tabla, filasNuevas, true)
+      if (errorEsquema) return { data: null, error: errorEsquema }
+      const nuevas = filasNuevas.map(v => ({
         id: Math.max(0, ...tabla.map(r => Number(r.id) || 0)) + 1,
         ...v,
       }))
       tabla.push(...nuevas)
       filas = nuevas
     } else if (this.op === 'update') {
+      const cambios = sinUndefined(this.payload as Row)
+      if (fallarUpdate.delete(this.tabla)) {
+        return { data: null, error: { message: `fallo simulado en ${this.tabla}`, code: 'XX000' } }
+      }
+      const errorEsquema = validarEsquema(this.tabla, [cambios], false)
+      if (errorEsquema) return { data: null, error: errorEsquema }
       filas = tabla.filter(coincide)
-      filas.forEach(r => Object.assign(r, this.payload))
+      filas.forEach(r => Object.assign(r, cambios))
     } else if (this.op === 'delete') {
       filas = tabla.filter(coincide)
       db[this.tabla] = tabla.filter(r => !coincide(r))
@@ -94,9 +170,20 @@ export const supabaseAdmin = {
     },
     // API admin de Auth: solo lo necesario para /api/admin/abogados
     admin: {
-      createUser: async () => ({ data: { user: { id: `auth-nuevo-${Date.now()}` } }, error: null }),
+      createUser: async ({ email }: { email: string }) => {
+        if (cuentasAuth.some(c => c.email === email)) {
+          return { data: { user: null }, error: { code: 'email_exists', message: 'A user with this email address has already been registered' } }
+        }
+        const cuenta = { id: `auth-nuevo-${cuentasAuth.length + 1}-${Date.now()}`, email }
+        cuentasAuth.push(cuenta)
+        return { data: { user: { id: cuenta.id } }, error: null }
+      },
       updateUserById: async () => ({ data: {}, error: null }),
-      deleteUser: async () => ({ data: {}, error: null }),
+      deleteUser: async (id: string) => {
+        const i = cuentasAuth.findIndex(c => c.id === id)
+        if (i >= 0) cuentasAuth.splice(i, 1)
+        return { data: {}, error: null }
+      },
     },
   },
 }
@@ -116,6 +203,11 @@ export const OTRO_ABOGADO_ID = 2
 /** Reinicia la BD falsa con usuarios de cada rol más las filas que pase el test. */
 export function resetDb(tablas: Record<string, Row[]> = {}) {
   for (const k of Object.keys(db)) delete db[k]
+  for (const k of Object.keys(esquemas)) delete esquemas[k]
+  esquemas.usuarios = ESQUEMA_USUARIOS
+  fallarInsert.clear()
+  fallarUpdate.clear()
+  cuentasAuth.length = 0
   Object.assign(tokens, {
     [TOKEN.abogado]: 'auth-abogado-1',
     [TOKEN.otroAbogado]: 'auth-abogado-2',
